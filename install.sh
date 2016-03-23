@@ -34,7 +34,7 @@ preconf(){
 	readopt "Git plugins directory" "${ZAF_LIB_DIR}/repo"
 	ZAF_REPO_DIR="$opt"
 
-	readopt "Plugins repository" "https://github.com/limosek/zaf.git/plugins"
+	readopt "Plugins repository" ""
 	ZAF_PLUGINS_REPO="$opt"
 
 	readopt "Default plugins to install" "process-info"
@@ -42,6 +42,9 @@ preconf(){
 
 	readopt "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf"
 	ZAF_AGENT_CONFIG="$opt"
+
+	readopt "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/"
+	ZAF_AGENT_CONFIGD="$opt"
 
 	readopt "Zabbix agent restart cmd" "service zabbix-agent restart"
 	ZAF_AGENT_RESTART="$opt"
@@ -73,6 +76,7 @@ preconf(){
   echo "ZAF_PLUGINS_REPO='$ZAF_PLUGINS_REPO'" >>/etc/zaf.conf
   echo "ZAF_AGENT_RESTART='$ZAF_AGENT_RESTART'" >>/etc/zaf.conf
   echo "ZAF_AGENT_CONFIG='$ZAF_AGENT_CONFIG'" >>/etc/zaf.conf
+  echo "ZAF_AGENT_CONFIGD='$ZAF_AGENT_CONFIGD'" >>/etc/zaf.conf
   echo "ZAF_SUDO='$ZAF_SUDO'" >>/etc/zaf.conf
 }
 
@@ -97,11 +101,20 @@ reconf)
 	fi
 	install $(getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}/
 	mkdir -p ${ZAF_PLUGINS_DIR}
+	echo "UserParameter=zaf.version,echo master" >${ZAF_AGENT_CONFIGD}/zaf_base.conf
 	install $(getrest zaf) /usr/bin 
 	echo "Install OK. Installing plugins (${ZAF_DEFAULT_PLUGINS})."
+	if  ! /usr/bin/zaf check-agent-config; then
+		echo "Something is wrong with zabbix agent config."
+		echo "Ensure that zabbix_agentd reads ${ZAF_AGENT_CONFIG}"
+		echo "and there is Include=${ZAF_AGENT_CONFIGD} directive inside."
+		echo "Does ${ZAF_AGENT_RESTART} work?"
+		exit 1
+	fi
 	for plugin in ${ZAF_DEFAULT_PLUGINS}; do
 		/usr/bin/zaf install $plugin || exit $?
 	done
+	rm -rif ${ZAF_TMP_DIR}
 	echo "Done"
 	;;
 esac

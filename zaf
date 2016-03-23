@@ -14,21 +14,37 @@ fi
 . ${ZAF_LIB_DIR}/zaf.lib.sh
 
 case $1 in
+
+check-agent-config)
+	zaf_check_agent_config
+	;;
+
 update)
 	zaf_update_repo
 	;;
 
-list-installed)
+list)
 	zaf_list_installed_plugins
+	;;
+
+info)
+	zaf_plugin_info "$2"
 	;;
 
 install)
 	zaf_install_plugin "$2"
 	;;
 
+remove)
+	zaf_remove_plugin "$2"
+	;;
+
 *)
 	echo "$0 update"
-	echo "$0 install plugin" 
+	echo "$0 list"
+	echo "$0 install plugin"
+	echo "$0 remove plugin" 
 	;;
+
 esac
 

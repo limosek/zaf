@@ -4,12 +4,14 @@ Maintainer: Lukas Macura <lukas@macura.cz>
 
 Item: cpu[*]
  This item will return cpu usage of given process. In zabbix, it will be prefixed automaticaly by plugin name (processlist.cpu)
-Item-cmd-cpu[*]: TOTAL=0; for PROC in $(/bin/ps u -C $1 | /bin/grep -e '^$2' | /usr/bin/awk '{ print $$3 }'); do TOTAL=$(echo "$TOTAL $PROC" | /usr/bin/awk '{print $$1 + $$2}') ; done; echo $TOTAL
+Item-cmd-cpu[*]: {PLUGINDIR}/cpu-get.sh
 
 Item: discovery
  Discovery of runing processes
-Item-cmd-discovery: echo "{\n \"data\":[" ; /bin/ps --no-headers caux | /usr/bin/awk '{ print " { \"{#PSUSER}\":\"" $1 "\", \"{#PSNAME}\":\"" $11 "\" },"}' | /usr/bin/sort | /usr/bin/uniq | /bin/sed -e 's/\//\\\//g' -e '$s/.$//' ; echo " ]\n}"
+Item-cmd-discovery: {PLUGINDIR}/cpu-get.sh
 
 Binary-Depends: echo ps awk sort uniq sed
+
+Install-bin: cpu-get.sh proc-discovery.sh
 
 
