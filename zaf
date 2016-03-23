@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# Some defaults
+
+ZAF_AGENT_RESTART="service zabbix-agentd restart"
+ZAF_AGENT_CONFIG="/etc/zabbix/zabbix_agentd.conf"
+ZAF_LIB_DIR="/usr/lib/zaf/"
+ZAF_PLUGINS_DIR="/usr/lib/zaf/plugins/"
+
+if [ -f /etc/zaf.conf  ]; then
+	. /etc/zaf.conf
+fi
+
+. ${ZAF_LIB_DIR}/zaf.lib.sh
+
+case $1 in
+update)
+	zaf_update_repo
+	;;
+
+list-installed)
+	zaf_list_installed_plugins
+	;;
+
+install)
+	zaf_install_plugin "$2"
+	;;
+
+*)
+	echo "$0 update"
+	echo "$0 install plugin" 
+	;;
+esac
+
