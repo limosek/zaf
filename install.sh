@@ -70,6 +70,10 @@ zaf_getrest(){
 
 zaf_install(){
 	cp "$1" "$2"
+}
+
+zaf_install_exe(){
+	cp "$1" "$2"
 	chmod +x "$2"
 }
 
@@ -107,7 +111,7 @@ zaf_configure(){
 	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$1"
 	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$1"
 	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$1"
-	zaf_get_option ZAF_PLUGINS_REPO "Plugins reposiory" "git://github.com/limosek/zaf-plugins.git" "$1"
+	zaf_get_option ZAF_PLUGINS_REPO "Plugins reposiory" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$1"
 	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$1"
 	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$1"
 	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$1"
@@ -163,14 +167,14 @@ defconf)
 	mkdir -p ${ZAF_TMP_DIR}
 	mkdir -p ${ZAF_LIB_DIR}
 	mkdir -p ${ZAF_PLUGINS_DIR}
-	zaf_install $(zaf_getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}/
-	zaf_install $(zaf_getrest lib/jshn.sh) ${ZAF_LIB_DIR}/
-	zaf_install $(zaf_getrest lib/zaflock) ${ZAF_LIB_DIR}/
+	zaf_install $(zaf_getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}/zaf.lib.sh
+	zaf_install $(zaf_getrest lib/jshn.sh) ${ZAF_LIB_DIR}/jshn.sh
+	zaf_install_exe $(zaf_getrest lib/zaflock) ${ZAF_LIB_DIR}/zaflock
 	mkdir -p ${ZAF_TMP_DIR}/p/zaf
 	zaf_install $(zaf_getrest control) ${ZAF_TMP_DIR}/p/zaf/
 	zaf_install $(zaf_getrest template.xml) ${ZAF_TMP_DIR}/p/zaf/
 	mkdir -p ${ZAF_PLUGINS_DIR}
-	zaf_install $(zaf_getrest zaf) /usr/bin/zaf
+	zaf_install_exe $(zaf_getrest zaf) /usr/bin/zaf
 	/usr/bin/zaf install ${ZAF_TMP_DIR}/p/zaf/
 	if  ! /usr/bin/zaf check-agent-config; then
 		echo "Something is wrong with zabbix agent config."

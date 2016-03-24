@@ -17,6 +17,7 @@ trap "rm -rif ${ZAF_TMP_DIR}" EXIT
 zaf_fetch_url() {
 	local scheme
 	local uri
+	local insecure
 	
 	scheme=$(echo $1|cut -d ':' -f 1)
 	uri=$(echo $1|cut -d '/' -f 3-)
@@ -25,7 +26,8 @@ zaf_fetch_url() {
 	fi
 	case $scheme in
 	http|https|ftp|file)
-		curl -f -s -L -o - "$1";
+		[ "${ZAF_CURL_INSECURE}" = "1" ] && insecure="-k"
+		curl $insecure -f -s -L -o - "$1";
 	;;
 	esac 
 }
@@ -181,10 +183,18 @@ zaf_install_plugin() {
 	local plugin
 	local plugindir
 
-	if echo "$1" | grep -qv '/'; then
-		url="${ZAF_REPO_DIR}/$1"
+	if echo "$1" | grep -q '/'; then
+		url="$1" 		# plugin with path - installing from directory
 	else
-		url="$1"
+		if echo "$1" | grep -q ^http; then
+			url="$1"	# plugin with http[s] url 
+		else
+			if [ -d "${ZAF_REPO_DIR}/$1" ]; then
+				url="${ZAF_REPO_DIR}/$1"
+			else
+				url="${ZAF_PLUGINS_REPO}/$1";
+			fi
+		fi
 	fi
 	plugin="plug$$"
 	rm -rf ${ZAF_TMP_DIR}/${plugin}
