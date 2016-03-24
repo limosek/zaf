@@ -12,7 +12,7 @@ Maintainer: Lukas Macura <lukas@macura.cz>
 Item: version
  Returns version of zaf installed.
 
-Item-cmd-version: {ZAFLIB} zaf_list_plugins
+Item-cmd-version: {ZAFFUNC} zaf_list_plugins
 
 Item: plugins
  Returns installed plugins

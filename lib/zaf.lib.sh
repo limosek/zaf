@@ -1,10 +1,15 @@
 
+############################################ Init part
+# Get all config variables and initialise TMP
+
+! [ -f /etc/zaf.conf ] && { echo "Config file /etc/zaf.conf does not exists! Exiting."; exit 2; }
 . /etc/zaf.conf
 . ${ZAF_LIB_DIR}/jshn.sh
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
 trap "rm -rif ${ZAF_TMP_DIR}" EXIT
-
 ! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
+
+############################################ Common routines
 
 # Fetch url to stdout 
 # $1 url
@@ -20,7 +25,7 @@ zaf_fetch_url() {
 	fi
 	case $scheme in
 	http|https|ftp|file)
-		curl -f -s -L -o - "$1";
+		curl -k -f -s -L -o - "$1";
 	;;
 	esac 
 }
@@ -41,6 +46,43 @@ zaf_far(){
         done
    eval $sedcmd
 }
+
+# Initialises discovery function
+zaf_discovery_init(){
+  json_init
+  json_add_array data
+}
+
+# Add row(s) to discovery data
+zaf_discovery_add_row(){
+  json_add_object "obj"
+  while [ -n "$1" ]; do
+    json_add_string "$1" "$2"
+    shift
+    shift
+  done
+  json_close_object
+}
+
+# Dumps json object
+zaf_discovery_dump(){
+ json_close_array
+ json_dump
+}
+
+# Read standard input as discovery data. Columns are divided by space.
+# Arguments are name of variables to discovery.
+# Dumps json to stdout
+zaf_discovery(){
+  local a b c d e f g h i j;
+  zaf_discovery_init
+  while read a b c d e f g h i j; do
+    zaf_discovery_add_row "$1" "${1:+${a}}" "$2" "${2:+${b}}" "$3" "${3:+${c}}" "$4" "${4:+${d}}" "$5" "${5:+${e}}" "$6" "${6:+${f}}" "$7" "${7:+${g}}" "$8" "${8:+${h}}" "$9" "${9:+${i}}"
+  done
+  zaf_discovery_dump
+}
+
+############################################ Zaf internal routines
 
 # Restart zabbix agent
 zaf_restart_agent() {
@@ -155,7 +197,8 @@ zaf_install_plugin() {
 			zaf_ctrl_install_bin "${control}" "${plugin}" 
 			zaf_ctrl_generate_cfg "${control}" "${plugin}" | \
 				zaf_far '{PLUGINDIR}' "$plugindir" | \
-				zaf_far '{ZAFLIB}' ". ${ZAF_LIB_DIR}/zaf.lib.sh; " | \
+				zaf_far '{ZAFLIB}' ". ${ZAF_LIB_DIR}/zaf.lib.sh; . " | \
+				zaf_far '{ZAFFUNC}' ". ${ZAF_LIB_DIR}/zaf.lib.sh; " | \
 				zaf_far '{ZAFLOCK}' "${ZAF_LIB_DIR}/zaflock '$plugin' " \
 				>${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_restart_agent
