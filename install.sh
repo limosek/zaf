@@ -81,7 +81,7 @@ zaf_detect_pkg() {
 	fi
 	if which opkg >/dev/null; then
 		ZAF_PKG="opkg"
-		ZAF_AGENT_RESTART=/etc/init.d/zabbix_agentd restart
+		ZAF_AGENT_RESTART="/etc/init.d/zabbix_agentd restart"
 		ZAF_CURL_INSECURE=1
 		return
 	fi
