@@ -1,4 +1,11 @@
 
+. /etc/zaf.conf
+. ${ZAF_LIB_DIR}/jshn.sh
+ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
+trap "rm -rif ${ZAF_TMP_DIR}" EXIT
+
+! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
+
 # Fetch url to stdout 
 # $1 url
 # It supports real file, file:// and other schemes known by curl
@@ -48,12 +55,9 @@ zaf_check_agent_config() {
 
 # Update repo
 zaf_update_repo() {
+	[ "$ZAF_GIT" != 1 ] && { echo "Git is not installed."; return 1; }
+	! [ -d ${ZAF_REPO_DIR} ] &&  git clone "${ZAF_PLUGINS_REPO}" "${ZAF_REPO_DIR}"
 	[ -n "${ZAF_PLUGINS_REPO}" ] && cd ${ZAF_REPO_DIR} && git pull
-}
-
-# List installed plugins
-zaf_list_installed_plugins() {
-	cd ${ZAF_PLUGINS_DIR}; ls --hide '.'
 }
 
 # Check plugin url
@@ -69,7 +73,20 @@ zaf_plugin_fetch_control() {
 # $1 control file
 # $2 option
 zaf_ctrl_get_option() {
-	grep -E '^(.*): ' "$1" | grep -F "$2:" | cut -d ' ' -f 2-
+	awk 'BEGIN { FS=": "; }; /^'$2': / { printf $2$3$4$5"\n"; }' <$1
+}
+
+# Get description from control file
+# $1 control file
+# $2 option
+zaf_ctrl_get_description() {
+	awk \
+	"/^$2/"' { i=1;
+     		while (1) {
+        		getline; if (substr($0,0,1) != " ") exit;
+        		printf $0"\n";
+      		}
+     	}' <$1
 }
 
 zaf_ctrl_binary_deps() {
@@ -100,8 +117,11 @@ zaf_ctrl_install_bin() {
 zaf_ctrl_generate_cfg() {
 	local items
 	local cmd
+	local ilock
+
 	items=$(zaf_ctrl_get_option "$1" Item)
 	for i in $items; do
+		ilock=$(echo $i | tr -d '[]*&;:')
 		cmd=$(zaf_ctrl_get_option "$1" "Item-cmd-$i")
 		echo "UserParameter=$2.${i},$cmd"
 	done
@@ -120,45 +140,118 @@ zaf_install_plugin() {
 	else
 		url="$1"
 	fi
-	plugin=$(basename "$url")
-	echo Installing plugin $plugin from $url...
+	plugin="plug$$"
 	rm -rf ${ZAF_TMP_DIR}/${plugin}
 	control=${ZAF_TMP_DIR}/${plugin}/control
-	plugindir="${ZAF_PLUGINS_DIR}/${plugin}"
 	mkdir -p "${ZAF_TMP_DIR}/${plugin}"
 	if zaf_plugin_fetch_control "$url" "${control}"; then
 		set -e
-		zaf_ctrl_binary_deps "${control}"
-		mkdir -p $plugindir
-		zaf_ctrl_install_bin "${control}" "${plugin}" 
-		zaf_ctrl_generate_cfg "${control}" "${plugin}" | zaf_far '{PLUGINDIR}' "$plugindir" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
-		zaf_restart_agent
-		cp $control "$plugindir"/
-		zaf_fetch_url $url/template.xml >"$plugindir"/template.xml
+		plugin=$(zaf_ctrl_get_option "${control}" Plugin)
+		if [ -n "$plugin" ]; then
+			echo Installing plugin $plugin from $url...
+			plugindir="${ZAF_PLUGINS_DIR}/${plugin}"
+			zaf_ctrl_binary_deps "${control}"
+			mkdir -p $plugindir
+			zaf_ctrl_install_bin "${control}" "${plugin}" 
+			zaf_ctrl_generate_cfg "${control}" "${plugin}" | \
+				zaf_far '{PLUGINDIR}' "$plugindir" | \
+				zaf_far '{ZAFLIB}' ". ${ZAF_LIB_DIR}/zaf.lib.sh; " | \
+				zaf_far '{ZAFLOCK}' "${ZAF_LIB_DIR}/zaflock '$plugin' " \
+				>${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+			zaf_restart_agent
+			cp $control "$plugindir"/
+			zaf_fetch_url $url/template.xml >"$plugindir"/template.xml
+		else
+			echo "Bad control file!"
+			cat $control
+			exit 4
+		fi
 	else
 		echo "Cannot fetch control file!"
 		exit 4
 	fi
 }
 
-zaf_plugin_info() {
+# Show installed plugins (human readable)
+# $1 - plugin
+zaf_show_installed_plugins() {
+	local cfile
+	local plugin
+	cd ${ZAF_PLUGINS_DIR}; ls --hide '.' -1 | while read plugin; do
+		cfile=${ZAF_PLUGINS_DIR}/$plugin/control
+		echo Plugin $plugin:
+		zaf_ctrl_get_description $cfile Plugin:
+		echo "Homepage:" $(zaf_ctrl_get_option $cfile Web)
+		echo "Maintainer:" $(zaf_ctrl_get_option $cfile Maintainer)
+		echo
+	done
+}
+
+# List installed plugins
+# $1 - plugin
+zaf_list_plugins() {
+	local cfile
+	local plugin
+	cd ${ZAF_PLUGINS_DIR}; ls --hide '.' -1 
+}
+
+zaf_show_plugin() {
 	local items
 	local plugindir
+	local cfile
+	local tst
 
+	if [ -z "$1" ]; then
+		echo "Missing plugin name";
+		exit 1
+	fi
+	[ -n "$2" ] && tst=1
 	plugindir="${ZAF_PLUGINS_DIR}/$1"
-	if [ -d "$plugindir" ]; then
-		items=$(zaf_ctrl_get_option "$plugindir/control" Item)
-		echo "Items supported:"
-		echo "$items"
+	cfile="$plugindir/control"
+	if [ -d "$plugindir" ] ; then
+		echo "Plugin $1:"
+		zaf_ctrl_get_description "$cfile" "Plugin:"
+		echo "Homepage:" $(zaf_ctrl_get_option $cfile Web)
+		echo "Maintainer:" $(zaf_ctrl_get_option $cfile Maintainer)	
+		items=$(zaf_list_plugin_items $1)
+		echo 
+		echo "Supported items:"
+		for i in $items; do
+			echo -n "$1.$i: "
+			[ -n "$tst" ] && ${ZAF_AGENT_BIN} -t "$1.$i"
+			echo
+			zaf_ctrl_get_description "$cfile" "Item: $i";
+			echo
+		done
 	else
 		echo "Plugin $1 not installed" 
 	fi
 }
 
+zaf_list_plugin_items() {
+	if [ -z "$1" ]; then
+		echo "Missing plugin name";
+		exit 1
+	fi
+	plugindir="${ZAF_PLUGINS_DIR}/$1"
+	cfile="$plugindir/control"
+	if [ -d "$plugindir" ] ; then
+		zaf_ctrl_get_option "$cfile" Item
+	else
+		echo "Plugin $1 not installed" 
+	fi
+}
+
+zaf_list_items() {
+	for p in $(zaf_list_plugins); do
+		zaf_list_plugin_items $p
+	done
+}
+
 zaf_remove_plugin() {
+	! [ -d ${ZAF_PLUGINS_DIR}/$1 ] && { echo "Plugin $1 not installed!"; exit 2; }
 	rm -rf ${ZAF_PLUGINS_DIR}/$1
 	rm -f ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 }
-
 
 

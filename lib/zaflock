@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. /etc/zaf.conf
+
+. ${ZAF_LIB_DIR}/zaf.lib.sh
+
+help() {
+	echo "$0 key cmd"
+	exit 2
+}
+
+lkey="$1"
+[ -z "$lkey" ] && help
+shift
+
+[ -z "${ZAF_LOCK_SECONDS}" ] && seconds=5
+[ -z "${ZAF_LOCK_FORCE}" ] && force=1
+
+lockfile="${ZAF_TMP_DIR}/zaflock_${lkey}"
+i=0
+while [ -f "$lockfile" ] && [ $i -lt $seconds ]; do
+	sleep 1
+	i=$(expr $i + 1)
+done
+if [ -f "$lockfile" ] && [ -n "$force" ]; then
+	logger -s -t "zlock" -p daemon.warn "Releasing $lockfile!"
+	rm -f "$lockfile"
+fi
+if [ -f "$lockfile" ] && [ -z "$force" ]; then
+	logger -s -t "zlock" -p daemon.err "Could not get lock for $lockfile!"
+	exit 1
+fi
+
+touch "$lockfile"
+[ -n "$*" ] && $@
+rm -f "$lockfile"
+

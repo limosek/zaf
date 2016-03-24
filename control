@@ -1,0 +1,23 @@
+Plugin: zaf
+ Basic items for Zabbix Agent Framework
+
+Version: 0.1
+
+Url: https://raw.githubusercontent.com/limosek/zaf/master/
+
+Web: https://github.com/limosek/zaf/
+
+Maintainer: Lukas Macura <lukas@macura.cz>
+
+Item: version
+ Returns version of zaf installed.
+
+Item-cmd-version: {ZAFLIB} zaf_list_plugins
+
+Item: plugins
+ Returns installed plugins
+
+Item-cmd-plugins: {ZAFLOCK} zaf list
+
+Binary-Depends: echo zaf
+

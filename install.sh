@@ -2,6 +2,10 @@
 
 ZAF_CFG_FILE=/etc/zaf.conf
 
+zaf_msg() {
+	[ "$ZAF_DEBUG" = "1" ] && echo $@
+}
+
 # Read option. If it is already set in zaf.conf, it is skipped. If env variable is set, it is used instead of default
 # It sets global variable name on result.
 # $1 - option name
@@ -13,7 +17,7 @@ zaf_get_option(){
 	eval opt=\$$1
 	if [ -n "$opt" ] && ! [ "$4" = "user" ]; then
 		eval "$1='$opt'"
-		echo "Got $2 <$1> from ENV: $opt" >&2
+		zaf_msg "Got $2 <$1> from ENV: $opt" >&2
 		return
 	else
 		opt="$3"
@@ -26,9 +30,9 @@ zaf_get_option(){
 	fi
 	if [ -z "$opt" ]; then
 		opt="$3"
-		echo "Got $2 <$1> from Defaults: $opt" >&2
+		zaf_msg "Got $2 <$1> from Defaults: $opt" >&2
 	else
-		echo "Got $2 <$1> from USER: $opt"
+		zaf_msg "Got $2 <$1> from USER: $opt"
 	fi
 	eval "$1='$opt'"	
 }
@@ -39,7 +43,9 @@ zaf_get_option(){
 zaf_set_option(){
 	if ! grep -q "^$1=" ${ZAF_CFG_FILE}; then
 		echo "$1='$2'" >>${ZAF_CFG_FILE}
-		echo "Saving $1 to $2 in ${ZAF_CFG_FILE}" >&2
+		zaf_msg "Saving $1 to $2 in ${ZAF_CFG_FILE}" >&2
+	else
+		zaf_msg "Preserving $1 to $2 in ${ZAF_CFG_FILE}" >&2
 	fi
 }
 
@@ -74,40 +80,60 @@ zaf_no_perms(){
 
 zaf_configure(){
 
-	zaf_detect_pkg ZAF_PKG "Packaging system to use" "$(zaf_detect_pkg)"	
-	zaf_get_option ZAF_TMP_DIR "Tmp directory" "/tmp/zaf"
-	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf"
-	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins"
-	zaf_get_option ZAF_PLUGINS_REPO "Plugins reposiory" "git://github.com/limosek/zaf-plugins.git"
-	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf"
-	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/"
-	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd"
-	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart"
+	[ "$1" = "user" ] && ZAF_DEBUG=1
+	zaf_detect_pkg ZAF_PKG "Packaging system to use" "$(zaf_detect_pkg)" "$1"
+	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$1"
+	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$1"
+	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$1"
+	zaf_get_option ZAF_PLUGINS_REPO "Plugins reposiory" "git://github.com/limosek/zaf-plugins.git" "$1"
+	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$1"
+	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$1"
+	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$1"
+	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$1"
+	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$1"
 	
 	if ! which $ZAF_AGENT_BIN >/dev/null; then
 		echo "Zabbix agent not installed? Use ZAF_ZABBIX_AGENT_BIN env variable to specify location. Exiting."
 		exit 3
 	fi
+	if which git >/dev/null; then
+		ZAF_GIT=1
+	else
+		ZAF_GIT=""
+	fi
+
 	if ! [ -f "${ZAF_CFG_FILE}" ]; then
 		touch "${ZAF_CFG_FILE}" || zaf_no_perms "${ZAF_CFG_FILE}"
 	fi
 	
 	zaf_set_option ZAF_PKG "${ZAF_PKG}"
-	zaf_set_option ZAF_TMP_DIR "$ZAF_TMP_DIR"
+	zaf_set_option ZAF_GIT "${ZAF_GIT}"
+	zaf_set_option ZAF_TMP_BASE "$ZAF_TMP_BASE"
 	zaf_set_option ZAF_LIB_DIR "$ZAF_LIB_DIR"
 	zaf_set_option ZAF_PLUGINS_DIR "$ZAF_PLUGINS_DIR"
 	zaf_set_option ZAF_PLUGINS_REPO "$ZAF_PLUGINS_REPO"
+	zaf_set_option ZAF_REPO_DIR "$ZAF_REPO_DIR"
 	zaf_set_option ZAF_AGENT_CONFIG "$ZAF_AGENT_CONFIG"
 	zaf_set_option ZAF_AGENT_CONFIGD "$ZAF_AGENT_CONFIGD"
 	zaf_set_option ZAF_AGENT_BIN "$ZAF_AGENT_BIN"
-	zaf_set_option ZAF_AGENTRESTART "$ZAF_AGENT_RESTART"
+	zaf_set_option ZAF_AGENT_RESTART "$ZAF_AGENT_RESTART"
+	ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
 }
 
 if [ -f "${ZAF_CFG_FILE}" ]; then
 	. "${ZAF_CFG_FILE}"
 fi
+ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
 
 case $1 in
+reconf)
+	zaf_configure user
+	$0 install
+	;;
+defconf)
+	zaf_configure silent
+	$0 install
+	;;
 *)
 	zaf_configure
 	rm -rif ${ZAF_TMP_DIR}
@@ -115,10 +141,14 @@ case $1 in
 	install -d ${ZAF_LIB_DIR}
 	install -d ${ZAF_PLUGINS_DIR}
 	install $(getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}/
+	install $(getrest lib/jshn.sh) ${ZAF_LIB_DIR}/
+	install $(getrest lib/zaflock) ${ZAF_LIB_DIR}/
+	mkdir -p ${ZAF_TMP_DIR}/p/zaf
+	install $(getrest control) ${ZAF_TMP_DIR}/p/zaf/
+	install $(getrest template.xml) ${ZAF_TMP_DIR}/p/zaf/
 	mkdir -p ${ZAF_PLUGINS_DIR}
-	echo "UserParameter=zaf.version,echo master" >${ZAF_AGENT_CONFIGD}/zaf_base.conf
-	install $(getrest zaf) /usr/bin 
-	echo "Install OK. Installing plugins (${ZAF_DEFAULT_PLUGINS})."
+	install $(getrest zaf) /usr/bin/
+	/usr/bin/zaf install ${ZAF_TMP_DIR}/p/zaf/
 	if  ! /usr/bin/zaf check-agent-config; then
 		echo "Something is wrong with zabbix agent config."
 		echo "Ensure that zabbix_agentd reads ${ZAF_AGENT_CONFIG}"
@@ -126,11 +156,8 @@ case $1 in
 		echo "Does ${ZAF_AGENT_RESTART} work?"
 		exit 1
 	fi
-	for plugin in ${ZAF_DEFAULT_PLUGINS}; do
-		/usr/bin/zaf install $plugin || exit $?
-	done
 	rm -rif ${ZAF_TMP_DIR}
-	echo "Done"
+	echo "Install OK. Use 'zaf' without parameters to continue."
 	;;
 esac
 

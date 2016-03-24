@@ -1,14 +1,10 @@
 #!/bin/sh
 
-# Some defaults
-
-ZAF_AGENT_RESTART="service zabbix-agentd restart"
-ZAF_AGENT_CONFIG="/etc/zabbix/zabbix_agentd.conf"
-ZAF_LIB_DIR="/usr/lib/zaf/"
-ZAF_PLUGINS_DIR="/usr/lib/zaf/plugins/"
-
 if [ -f /etc/zaf.conf  ]; then
 	. /etc/zaf.conf
+else
+	echo "Missing config file /etc/zaf.conf! Exiting."
+	exit 2
 fi
 
 . ${ZAF_LIB_DIR}/zaf.lib.sh
@@ -23,12 +19,28 @@ update)
 	zaf_update_repo
 	;;
 
-list)
-	zaf_list_installed_plugins
+show)
+	if [ -z "$2" ]; then
+		zaf_show_installed_plugins
+	else
+		zaf_show_plugin "$2"
+	fi
 	;;
 
-info)
-	zaf_plugin_info "$2"
+list)
+	zaf_list_plugins
+	;;
+
+list-items)
+	if [ -z "$2" ]; then
+		zaf_list_items
+	else
+		zaf_list_plugin_items "$2"
+	fi
+	;;
+
+test-items)
+	zaf_show_plugin "$2" tst
 	;;
 
 install)
@@ -39,11 +51,19 @@ remove)
 	zaf_remove_plugin "$2"
 	;;
 
+self-upgrade)
+	curl -s https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
+	;;
+
 *)
-	echo "$0 update"
-	echo "$0 list"
-	echo "$0 install plugin"
-	echo "$0 remove plugin" 
+	echo "$0 update			To update repo" 
+	echo "$0 list			To list installed plugins"
+	echo "$0 show [plugin]		To show installed plugins or plugin info"
+	echo "$0 list-items [plugin]	To list all suported items [for plugin]"
+	echo "$0 test-items plugin	To test all suported items for plugin"
+	echo "$0 install plugin		To install plugin"
+	echo "$0 remove plugin		To remove plugin" 
+	echo "$0 self-upgrade		To self-upgrade zaf"
 	;;
 
 esac
