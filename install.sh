@@ -1,5 +1,15 @@
 #!/bin/sh
 
+if ! [ "$(basename $0)" = "install.sh" ]; then
+	# We are runing from stdin
+	set -e
+	mkdir -p /tmp/zaf-installer \
+	&& cd /tmp/zaf-installer \
+	&& curl -f -k -s -L -o - https://raw.githubusercontent.com/limosek/zaf/master/install.sh >install.sh \
+	&& chmod +x install.sh \
+	&& exec ./install.sh
+fi
+
 ZAF_CFG_FILE=/etc/zaf.conf
 
 zaf_msg() {
@@ -49,26 +59,35 @@ zaf_set_option(){
 	fi
 }
 
-getrest(){
+zaf_getrest(){
 	if [ -f "$(dirname $0)/$1" ]; then
 		echo "$(dirname $0)/$1"
 	else
-		wget https://raw.githubusercontent.com/limosek/zaf/master/$1 -O- >${ZAF_TMP_DIR}/$(basename $1)
+		curl -f -k -s -L -o - https://raw.githubusercontent.com/limosek/zaf/master/$1 >${ZAF_TMP_DIR}/$(basename $1)
 		echo ${ZAF_TMP_DIR}/$(basename $1)
 	fi
+}
+
+zaf_install(){
+	cp "$1" "$2"
+	chmod +x "$2"
 }
 
 zaf_detect_pkg() {
 	if which dpkg >/dev/null; then
 		ZAF_PKG="dpkg"
+		ZAF_CURL_INSECURE=0
 		return
 	fi
 	if which opkg >/dev/null; then
 		ZAF_PKG="opkg"
+		ZAF_AGENT_RESTART=/etc/init.d/zabbix_agentd restart
+		ZAF_CURL_INSECURE=1
 		return
 	fi
 	if which rpm >/dev/null; then
 		ZAF_PKG="rpm"
+		ZAF_CURL_INSECURE=0
 		return
 	fi
 }
@@ -82,6 +101,7 @@ zaf_configure(){
 
 	[ "$1" = "user" ] && ZAF_DEBUG=1
 	zaf_detect_pkg ZAF_PKG "Packaging system to use" "$(zaf_detect_pkg)" "$1"
+	zaf_get_option ZAF_CURL_INSECURE "Insecure curl (accept all certificates)" "1" "$1"
 	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$1"
 	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$1"
 	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$1"
@@ -108,6 +128,7 @@ zaf_configure(){
 	
 	zaf_set_option ZAF_PKG "${ZAF_PKG}"
 	zaf_set_option ZAF_GIT "${ZAF_GIT}"
+	zaf_set_option ZAF_CURL_INSECURE "${ZAF_CURL_INSECURE}"
 	zaf_set_option ZAF_TMP_BASE "$ZAF_TMP_BASE"
 	zaf_set_option ZAF_LIB_DIR "$ZAF_LIB_DIR"
 	zaf_set_option ZAF_PLUGINS_DIR "$ZAF_PLUGINS_DIR"
@@ -137,17 +158,17 @@ defconf)
 *)
 	zaf_configure
 	rm -rif ${ZAF_TMP_DIR}
-	install -d ${ZAF_TMP_DIR}
-	install -d ${ZAF_LIB_DIR}
-	install -d ${ZAF_PLUGINS_DIR}
-	install $(getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}/
-	install $(getrest lib/jshn.sh) ${ZAF_LIB_DIR}/
-	install $(getrest lib/zaflock) ${ZAF_LIB_DIR}/
-	mkdir -p ${ZAF_TMP_DIR}/p/zaf
-	install $(getrest control) ${ZAF_TMP_DIR}/p/zaf/
-	install $(getrest template.xml) ${ZAF_TMP_DIR}/p/zaf/
+	mkdir -p ${ZAF_TMP_DIR}
+	mkdir -p ${ZAF_LIB_DIR}
 	mkdir -p ${ZAF_PLUGINS_DIR}
-	install $(getrest zaf) /usr/bin/
+	zaf_install $(zaf_getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}/
+	zaf_install $(zaf_getrest lib/jshn.sh) ${ZAF_LIB_DIR}/
+	zaf_install $(zaf_getrest lib/zaflock) ${ZAF_LIB_DIR}/
+	mkdir -p ${ZAF_TMP_DIR}/p/zaf
+	zaf_install $(zaf_getrest control) ${ZAF_TMP_DIR}/p/zaf/
+	zaf_install $(zaf_getrest template.xml) ${ZAF_TMP_DIR}/p/zaf/
+	mkdir -p ${ZAF_PLUGINS_DIR}
+	zaf_install $(zaf_getrest zaf) /usr/bin/zaf
 	/usr/bin/zaf install ${ZAF_TMP_DIR}/p/zaf/
 	if  ! /usr/bin/zaf check-agent-config; then
 		echo "Something is wrong with zabbix agent config."

@@ -25,7 +25,7 @@ zaf_fetch_url() {
 	fi
 	case $scheme in
 	http|https|ftp|file)
-		curl -k -f -s -L -o - "$1";
+		curl -f -s -L -o - "$1";
 	;;
 	esac 
 }
