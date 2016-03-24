@@ -84,6 +84,10 @@ zaf_discovery(){
 
 ############################################ Zaf internal routines
 
+zaf_version() {
+	echo master
+}
+
 # Restart zabbix agent
 zaf_restart_agent() {
 	${ZAF_AGENT_RESTART}
@@ -266,6 +270,24 @@ zaf_show_plugin() {
 			zaf_ctrl_get_description "$cfile" "Item: $i";
 			echo
 		done
+	else
+		echo "Plugin $1 not installed" 
+	fi
+}
+
+zaf_discovery_plugins() {
+	zaf_list_plugins | zaf_discovery '{#PLUGIN}'
+}
+
+zaf_plugin_version() {
+	if [ -z "$1" ]; then
+		echo "Missing plugin name";
+		exit 1
+	fi
+	plugindir="${ZAF_PLUGINS_DIR}/$1"
+	cfile="$plugindir/control"
+	if [ -d "$plugindir" ] ; then
+		zaf_ctrl_get_option "$cfile" Version
 	else
 		echo "Plugin $1 not installed" 
 	fi
