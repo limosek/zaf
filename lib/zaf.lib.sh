@@ -235,7 +235,7 @@ zaf_show_installed_plugins() {
 zaf_list_plugins() {
 	local cfile
 	local plugin
-	cd ${ZAF_PLUGINS_DIR}; ls --hide '.' -1 
+	cd ${ZAF_PLUGINS_DIR}; ls -1 
 }
 
 zaf_show_plugin() {

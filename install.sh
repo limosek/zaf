@@ -7,7 +7,7 @@ if ! [ "$(basename $0)" = "install.sh" ]; then
 	&& cd /tmp/zaf-installer \
 	&& curl -f -k -s -L -o - https://raw.githubusercontent.com/limosek/zaf/master/install.sh >install.sh \
 	&& chmod +x install.sh \
-	&& exec ./install.sh
+	&& exec ./install.sh defconf
 fi
 
 ZAF_CFG_FILE=/etc/zaf.conf
@@ -82,6 +82,8 @@ zaf_detect_pkg() {
 	if which opkg >/dev/null; then
 		ZAF_PKG="opkg"
 		ZAF_AGENT_RESTART="/etc/init.d/zabbix_agentd restart"
+		ZAF_AGENT_CONFIGD="/var/run/zabbix_agentd.conf.d/"
+		ZAF_AGENT_CONFIG="/etc/zabbix_agentd.conf"
 		ZAF_CURL_INSECURE=1
 		return
 	fi
