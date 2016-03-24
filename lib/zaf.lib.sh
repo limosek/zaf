@@ -206,7 +206,6 @@ zaf_install_plugin() {
 	control=${ZAF_TMP_DIR}/${plugin}/control
 	mkdir -p "${ZAF_TMP_DIR}/${plugin}"
 	if zaf_plugin_fetch_control "$url" "${control}"; then
-		set -e
 		plugin=$(zaf_ctrl_get_option "${control}" Plugin)
 		if [ -n "$plugin" ]; then
 			echo Installing plugin $plugin from $url...
@@ -243,8 +242,8 @@ zaf_show_installed_plugins() {
 		cfile=${ZAF_PLUGINS_DIR}/$plugin/control
 		echo Plugin $plugin:
 		zaf_ctrl_get_description $cfile Plugin:
-		echo "Homepage:" $(zaf_ctrl_get_option $cfile Web)
-		echo "Maintainer:" $(zaf_ctrl_get_option $cfile Maintainer)
+		echo " Homepage:" $(zaf_ctrl_get_option $cfile Web)
+		echo " Maintainer:" $(zaf_ctrl_get_option $cfile Maintainer)
 		echo
 	done
 }
@@ -273,16 +272,15 @@ zaf_show_plugin() {
 	if [ -d "$plugindir" ] ; then
 		echo "Plugin $1:"
 		zaf_ctrl_get_description "$cfile" "Plugin:"
-		echo "Homepage:" $(zaf_ctrl_get_option $cfile Web)
-		echo "Maintainer:" $(zaf_ctrl_get_option $cfile Maintainer)	
+		echo " Homepage:" $(zaf_ctrl_get_option $cfile Web)
+		echo " Maintainer:" $(zaf_ctrl_get_option $cfile Maintainer)	
 		items=$(zaf_list_plugin_items $1)
-		echo 
-		echo "Supported items:"
+		echo " Supported items:"
 		for i in $items; do
 			if [ -n "$tst" ]; then
-			  ${ZAF_AGENT_BIN} -t "$1.$i"
+			  echo -n " "; ${ZAF_AGENT_BIN} -t "$1.$i"
 			else
-			  echo -n "$1.$i: "
+			  echo -n " $1.$i: "
 			fi
 			echo
 			zaf_ctrl_get_description "$cfile" "Item: $i";
