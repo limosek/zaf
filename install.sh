@@ -172,11 +172,9 @@ defconf)
 	zaf_install $(zaf_getrest lib/jshn.sh) ${ZAF_LIB_DIR}/jshn.sh
 	zaf_install_exe $(zaf_getrest lib/zaflock) ${ZAF_LIB_DIR}/zaflock
 	mkdir -p ${ZAF_TMP_DIR}/p/zaf
-	zaf_install $(zaf_getrest control) ${ZAF_TMP_DIR}/p/zaf/
-	zaf_install $(zaf_getrest template.xml) ${ZAF_TMP_DIR}/p/zaf/
 	mkdir -p ${ZAF_PLUGINS_DIR}
 	zaf_install_exe $(zaf_getrest zaf) /usr/bin/zaf
-	/usr/bin/zaf install ${ZAF_TMP_DIR}/p/zaf/
+	/usr/bin/zaf install zaf
 	if  ! /usr/bin/zaf check-agent-config; then
 		echo "Something is wrong with zabbix agent config."
 		echo "Ensure that zabbix_agentd reads ${ZAF_AGENT_CONFIG}"

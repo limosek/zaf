@@ -11,6 +11,10 @@ trap "rm -rif ${ZAF_TMP_DIR}" EXIT
 
 ############################################ Common routines
 
+zaf_msg() {
+	[ "$ZAF_DEBUG" = "1" ] && echo $@
+}
+
 # Fetch url to stdout 
 # $1 url
 # It supports real file, file:// and other schemes known by curl
@@ -27,6 +31,7 @@ zaf_fetch_url() {
 	case $scheme in
 	http|https|ftp|file)
 		[ "${ZAF_CURL_INSECURE}" = "1" ] && insecure="-k"
+		zaf_msg curl $insecure -f -s -L -o - "$1"
 		curl $insecure -f -s -L -o - "$1";
 	;;
 	esac 
@@ -219,7 +224,7 @@ zaf_install_plugin() {
 			cp $control "$plugindir"/
 			zaf_fetch_url $url/template.xml >"$plugindir"/template.xml
 		else
-			echo "Bad control file!"
+			echo "Bad control file $control ($url)!"
 			cat $control
 			exit 4
 		fi
@@ -274,8 +279,11 @@ zaf_show_plugin() {
 		echo 
 		echo "Supported items:"
 		for i in $items; do
-			echo -n "$1.$i: "
-			[ -n "$tst" ] && ${ZAF_AGENT_BIN} -t "$1.$i"
+			if [ -n "$tst" ]; then
+			  ${ZAF_AGENT_BIN} -t "$1.$i"
+			else
+			  echo -n "$1.$i: "
+			fi
 			echo
 			zaf_ctrl_get_description "$cfile" "Item: $i";
 			echo

@@ -54,6 +54,15 @@ remove)
 self-upgrade)
 	curl -s https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
 	;;
+	
+self-remove)
+	if [ "$2" = "force" ]; then  
+	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} /usr/bin/zaf ${ZAF_AGENT_CONFIGD}/zap_*
+	else
+	  echo "This will remove zaf from this computer and erase all configuration."
+	  echo "To continue, please do $0 self-remove force"
+	fi
+      ;;
 
 *)
 	echo "$0 update			To update repo" 
