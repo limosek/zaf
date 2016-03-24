@@ -1,9 +1,46 @@
 #!/bin/sh
 
-readopt(){
-	echo -n "$1 [$2]: "
-	read opt
-	[ -z "$opt" ] && opt="$2"
+ZAF_CFG_FILE=/etc/zaf.conf
+
+# Read option. If it is already set in zaf.conf, it is skipped. If env variable is set, it is used instead of default
+# It sets global variable name on result.
+# $1 - option name
+# $2 - option description
+# $3 - default
+# $4 - if $4="silent" , use autoconf. if $4="user", force asking.
+zaf_get_option(){
+	local opt
+	eval opt=\$$1
+	if [ -n "$opt" ] && ! [ "$4" = "user" ]; then
+		eval "$1='$opt'"
+		echo "Got $2 <$1> from ENV: $opt" >&2
+		return
+	else
+		opt="$3"
+	fi
+	if ! [ "$4" = "silent" ]; then
+		echo -n "$2 <$1> [$opt]: "
+		read opt
+	else
+		opt=""
+	fi
+	if [ -z "$opt" ]; then
+		opt="$3"
+		echo "Got $2 <$1> from Defaults: $opt" >&2
+	else
+		echo "Got $2 <$1> from USER: $opt"
+	fi
+	eval "$1='$opt'"	
+}
+
+# Sets option to zaf.conf
+# $1 option name
+# $2 option value
+zaf_set_option(){
+	if ! grep -q "^$1=" ${ZAF_CFG_FILE}; then
+		echo "$1='$2'" >>${ZAF_CFG_FILE}
+		echo "Saving $1 to $2 in ${ZAF_CFG_FILE}" >&2
+	fi
 }
 
 getrest(){
@@ -15,90 +52,68 @@ getrest(){
 	fi
 }
 
-preconf(){
-  echo "Zabbix Agent Framework installer."
-  if ! which zabbix_agentd >/dev/null; then
-	echo "Zabbix agent not installed? Exiting."
-	exit 3
-  fi
-  if ! [ -f "/etc/zaf.conf" ] || [ -n "$1" ]; then
-	readopt "Tmp directory" "/tmp/zaf"
-	ZAF_TMP_DIR="$opt"
-
-	readopt "Libraries directory" "/usr/lib/zaf"
-	ZAF_LIB_DIR="$opt"
-
-	readopt "Plugins directory" "${ZAF_LIB_DIR}/plugins"
-	ZAF_PLUGINS_DIR="$opt"
-
-	readopt "Git plugins directory" "${ZAF_LIB_DIR}/repo"
-	ZAF_REPO_DIR="$opt"
-
-	readopt "Plugins repository" ""
-	ZAF_PLUGINS_REPO="$opt"
-
-	readopt "Default plugins to install" "process-info"
-	ZAF_DEFAULT_PLUGINS="$opt"
-
-	readopt "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf"
-	ZAF_AGENT_CONFIG="$opt"
-
-	readopt "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/"
-	ZAF_AGENT_CONFIGD="$opt"
-
-	readopt "Zabbix agent restart cmd" "service zabbix-agent restart"
-	ZAF_AGENT_RESTART="$opt"
-
-	if which sudo >/dev/null; then
-		sudo=1
-	else
-		sudo=0
+zaf_detect_pkg() {
+	if which dpkg >/dev/null; then
+		ZAF_PKG="dpkg"
+		return
 	fi
-	readopt "Use sudo" "$sudo"
-	ZAF_SUDO="$opt"
-  else
-	echo "Skipping configuration. Config file /etc/zaf.conf already exists."
-	. /etc/zaf.conf
-  fi
-  if [ "$USERNAME" = "root" ]; then
-	echo "We are root. That is OK."
-  else
-	if [ "$ZAF_SUDO" = 1 ] && ! which sudo >/dev/null; then
-		echo "We are not root and sudo is not installed. Cannot continue."
-		exit 2
+	if which opkg >/dev/null; then
+		ZAF_PKG="opkg"
+		return
 	fi
-	echo "We are not root. Assuming we have enough privileges."
-  fi
-  echo "ZAF_LIB_DIR='$ZAF_LIB_DIR'" >/etc/zaf.conf || { echo "Not enough privileges. Please become root!"; exit 2; }
-  echo "ZAF_TMP_DIR='$ZAF_TMP_DIR'" >>/etc/zaf.conf
-  echo "ZAF_PLUGINS_DIR='$ZAF_PLUGINS_DIR'" >>/etc/zaf.conf
-  echo "ZAF_REPO_DIR='$ZAF_REPO_DIR'" >>/etc/zaf.conf
-  echo "ZAF_PLUGINS_REPO='$ZAF_PLUGINS_REPO'" >>/etc/zaf.conf
-  echo "ZAF_AGENT_RESTART='$ZAF_AGENT_RESTART'" >>/etc/zaf.conf
-  echo "ZAF_AGENT_CONFIG='$ZAF_AGENT_CONFIG'" >>/etc/zaf.conf
-  echo "ZAF_AGENT_CONFIGD='$ZAF_AGENT_CONFIGD'" >>/etc/zaf.conf
-  echo "ZAF_SUDO='$ZAF_SUDO'" >>/etc/zaf.conf
+	if which rpm >/dev/null; then
+		ZAF_PKG="rpm"
+		return
+	fi
 }
 
+zaf_no_perms(){
+	echo "No permissions! to $1! Please become root or give perms. Exiting."
+	exit 2
+}
+
+zaf_configure(){
+
+	zaf_detect_pkg ZAF_PKG "Packaging system to use" "$(zaf_detect_pkg)"	
+	zaf_get_option ZAF_TMP_DIR "Tmp directory" "/tmp/zaf"
+	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf"
+	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins"
+	zaf_get_option ZAF_PLUGINS_REPO "Plugins reposiory" "git://github.com/limosek/zaf-plugins.git"
+	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf"
+	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/"
+	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd"
+	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart"
+	
+	if ! which $ZAF_AGENT_BIN >/dev/null; then
+		echo "Zabbix agent not installed? Use ZAF_ZABBIX_AGENT_BIN env variable to specify location. Exiting."
+		exit 3
+	fi
+	if ! [ -f "${ZAF_CFG_FILE}" ]; then
+		touch "${ZAF_CFG_FILE}" || zaf_no_perms "${ZAF_CFG_FILE}"
+	fi
+	
+	zaf_set_option ZAF_PKG "${ZAF_PKG}"
+	zaf_set_option ZAF_TMP_DIR "$ZAF_TMP_DIR"
+	zaf_set_option ZAF_LIB_DIR "$ZAF_LIB_DIR"
+	zaf_set_option ZAF_PLUGINS_DIR "$ZAF_PLUGINS_DIR"
+	zaf_set_option ZAF_PLUGINS_REPO "$ZAF_PLUGINS_REPO"
+	zaf_set_option ZAF_AGENT_CONFIG "$ZAF_AGENT_CONFIG"
+	zaf_set_option ZAF_AGENT_CONFIGD "$ZAF_AGENT_CONFIGD"
+	zaf_set_option ZAF_AGENT_BIN "$ZAF_AGENT_BIN"
+	zaf_set_option ZAF_AGENTRESTART "$ZAF_AGENT_RESTART"
+}
+
+if [ -f "${ZAF_CFG_FILE}" ]; then
+	. "${ZAF_CFG_FILE}"
+fi
+
 case $1 in
-reconf)
-	preconf force
-	export ZAF_DEFAULT_PLUGINS
-	$0 install
-	;;
 *)
-	preconf
+	zaf_configure
 	rm -rif ${ZAF_TMP_DIR}
 	install -d ${ZAF_TMP_DIR}
 	install -d ${ZAF_LIB_DIR}
 	install -d ${ZAF_PLUGINS_DIR}
-	if [ -n "${ZAF_PLUGINS_REPO}" ]; then
-		if ! [ -d "${ZAF_REPO_DIR}" ]; then
-			git clone  "${ZAF_PLUGINS_REPO}" "${ZAF_REPO_DIR}"
-		else
-			(cd "${ZAF_REPO_DIR}" && git pull)
-		fi
-	fi
 	install $(getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}/
 	mkdir -p ${ZAF_PLUGINS_DIR}
 	echo "UserParameter=zaf.version,echo master" >${ZAF_AGENT_CONFIGD}/zaf_base.conf

@@ -1,4 +1,7 @@
 
+# Fetch url to stdout 
+# $1 url
+# It supports real file, file:// and other schemes known by curl
 zaf_fetch_url() {
 	local scheme
 	local uri
@@ -15,6 +18,7 @@ zaf_fetch_url() {
 	esac 
 }
 
+# Find and replace string
 zaf_far(){
    local f
    local t
@@ -31,11 +35,12 @@ zaf_far(){
    eval $sedcmd
 }
 
-
+# Restart zabbix agent
 zaf_restart_agent() {
 	${ZAF_AGENT_RESTART}
 }
 
+# Check if zaf.version item is populated
 zaf_check_agent_config() {
 	zaf_restart_agent
 	zabbix_agentd -t zaf.version
