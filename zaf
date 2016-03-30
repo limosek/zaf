@@ -7,7 +7,19 @@ else
 	exit 2
 fi
 
+[ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
+ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
+trap "rm -rif ${ZAF_TMP_DIR}" EXIT
+! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
+
+# Devel version
+if [ -f $(dirname $0)/lib/zaf.lib.sh ]; then
+	ZAF_LIB_DIR=$(realpath $(dirname $0)/lib)
+fi
+
 . ${ZAF_LIB_DIR}/zaf.lib.sh
+. ${ZAF_LIB_DIR}/os.lib.sh
+. ${ZAF_LIB_DIR}/ctrl.lib.sh
 
 case $1 in
 
@@ -44,7 +56,11 @@ test-items)
 	;;
 
 install)
-	zaf_install_plugin "$2"
+	shift;
+	[ -z "$@" ] && echo "$0 install plugin [plugin]..."
+	for p in $@; do
+		zaf_install_plugin "$p"
+	done
 	;;
 
 remove)
@@ -52,12 +68,17 @@ remove)
 	;;
 
 self-upgrade)
-	curl -s https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
+	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
+	if zaf_fetch_url https://raw.githubusercontent.com/limosek/zaf/master/install.sh >/tmp/zaf-installer/install.sh; then
+		cd /tmp/zaf-installer && ./install.sh
+	else
+		echo "Cannot fetch uri https://raw.githubusercontent.com/limosek/zaf/master/install.sh!"; 
+	fi
 	;;
 	
 self-remove)
 	if [ "$2" = "force" ]; then  
-	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} /usr/bin/zaf ${ZAF_AGENT_CONFIGD}/zap_*
+	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} /usr/bin/zaf ${ZAF_AGENT_CONFIGD}/zaf_*
 	else
 	  echo "This will remove zaf from this computer and erase all configuration."
 	  echo "To continue, please do $0 self-remove force"
@@ -73,6 +94,7 @@ self-remove)
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
 	echo "$0 self-upgrade		To self-upgrade zaf"
+	echo "$0 self-remove		To self-remove zaf and its config"
 	;;
 
 esac
