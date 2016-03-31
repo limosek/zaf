@@ -2,7 +2,18 @@
 ############################################ Common routines
 
 zaf_msg() {
-	[ "$ZAF_DEBUG" = "1" ] && echo $@
+	echo $@
+}
+zaf_dbg() {
+	[ "$ZAF_DEBUG" -ge "3" ] && logger -s -t zaf $@
+}
+zaf_wrn() {
+	[ "$ZAF_DEBUG" -ge "2" ] && logger -s -t zaf $@
+}
+zaf_err() {
+	logger -s -t zaf $@
+        logger -s -t zaf "Exiting with error!"
+        exit 1
 }
 
 # Fetch url to stdout 
@@ -87,13 +98,13 @@ zaf_version() {
 
 # Restart zabbix agent
 zaf_restart_agent() {
-	${ZAF_AGENT_RESTART}
+	${ZAF_AGENT_RESTART} || zaf_err "Cannot restart Zabbix agent (${ZAF_AGENT_RESTART})!"
 }
 
 # Check if zaf.version item is populated
 zaf_check_agent_config() {
 	zaf_restart_agent
-	zabbix_agentd -t zaf.version
+	${ZAF_AGENT_BIN} -t zaf.version
 }
 
 # Update repo
@@ -102,7 +113,6 @@ zaf_update_repo() {
 	! [ -d ${ZAF_REPO_DIR} ] &&  git clone "${ZAF_PLUGINS_REPO}" "${ZAF_REPO_DIR}"
 	[ -n "${ZAF_PLUGINS_REPO}" ] && cd ${ZAF_REPO_DIR} && git pull
 }
-
 
 # Construct url from plugin name
 # It can be http[s]://url
@@ -153,26 +163,25 @@ zaf_plugin_info() {
 # Prepare plugin into tmp dir 
 # $1 is url, directory or plugin name (will be searched in default plugin dir). 
 # $2 is directory to prepare. 
+# $3 plugin name 
 zaf_prepare_plugin() {
-	url=$(zaf_get_plugin_url "$1")
+	url=$(zaf_get_plugin_url "$1")/control.zaf
 	plugindir="$2"
 	control=${plugindir}/control.zaf
-	echo "Fetching control file from $url ..."
-	if zaf_plugin_fetch_control "$url" "${control}"; then
+	zaf_dbg "Fetching control file from $url ..."
+	if zaf_fetch_url "$url" >"${control}"; then
 		zaf_plugin_info "${control}"
 		zaf_ctrl_check_deps "${control}"
 	else
-		echo "Cannot fetch control file!"
-		return 1
+		zaf_err "Cannot fetch or write control file!"
 	fi
 }
 
 zaf_install_plugin() {
 	mkdir "${ZAF_TMP_DIR}/plugin"
-	
 	if zaf_prepare_plugin "$1" "${ZAF_TMP_DIR}/plugin"; then
+                plugin=$(zaf_ctrl_get_global_block <"${ZAF_TMP_DIR}/plugin/control.zaf" | zaf_block_get_option Plugin)
 		plugindir="${ZAF_PLUGINS_DIR}"/$plugin
-		echo $plugindir;exit;
 		if zaf_prepare_plugin "$1" $plugindir; then
 			zaf_ctrl_check_deps "${control}"
 			zaf_ctrl_install "${control}" "${plugin}" 
@@ -184,10 +193,10 @@ zaf_install_plugin() {
 				zaf_far '{ZAFLOCK}' "${ZAF_LIB_DIR}/zaflock '$plugin' " \
 				>$plugindir/zabbix.conf
 		else
-			echo "Bad control file $control ($url)!"
-			cat $control
-			exit 4
+			zaf_err "Cannot install plugin $plugin to $plugindir!"
 		fi
+        else
+            return 1
 	fi
 
 }

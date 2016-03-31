@@ -1,14 +1,5 @@
 # Control file related functions
 
-# Check plugin url
-# $1 plugin uri
-# $2 local file to fetch
-zaf_plugin_fetch_control() {
-	[ -z "$1" ] && return -1
-	local name=$(basename "$1")
-	zaf_fetch_url "$1/control.zaf" >"$2"
-}
-
 # Get block from stdin
 # $1 option
 # $2 name
@@ -24,7 +15,10 @@ zaf_ctrl_get_item_block() {
 		getline;
 		if (/^\/Item/) exit;
 		print $0;
-	}}'
+	}};
+	END {
+		exit i==0;
+	}'
 }
 
 # Get global plugin block body from stdin
@@ -44,26 +38,44 @@ zaf_block_get_moption() {
 	awk '/^'$1'::$/ { i=0;
 	while (i==0) {
 		getline;
-		if (/^::$/) exit;
+		if (/^::$/) {i=1; continue;};
 		print $0;
-	}}'
+	}};
+	END {
+		exit i==0;
+	}
+	'
 }
 
-# Get item singleline option
+# Get item singleline option from config block on stdin
 # $1 optionname
 zaf_block_get_option() {
 	grep "^$1:" | cut -d ' ' -f 2- | tr -d '\r\n'
 }
 
+# Get global option (single or multiline)
+# $1 - control file
+# $2 - option name
+zaf_ctrl_get_global_option() {
+	zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" || zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
+}
+# Get item specific option (single or multiline)
+# $1 - control file
+# $2 - item name
+# $3 - option name
+zaf_ctrl_get_item_option() {
+	zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" || zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
+}
+
 zaf_ctrl_check_deps() {
 	local deps
 	deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-${ZAF_PKG}" )
-	zaf_check_deps $deps
+	zaf_os_specific zaf_check_deps $deps
 	deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-bin" )
 	for cmd in $deps; do
 		if ! which $cmd >/dev/null; then
-			echo "Missing binary dependency $cmd. Please install it first."
-			return 1
+			zaf_wrn "Missing binary dependency $cmd. Please install it first."
+                        return 1
 		fi
 	done
 }
@@ -80,11 +92,11 @@ zaf_ctrl_install() {
 	pdir="$2"
 	binaries=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Install-bin" | zaf_far '{PLUGINDIR}' "$plugindir" )
 	for b in $binaries; do
-		zaf_fetch_url "$url/$b" >"$pdir/$b"
-		chmod +x "$pdir/$b"
+		zaf_fetch_url "$url/$b" >"${ZAF_TMP_DIR}/$b"
+                zaf_install_bin "${ZAF_TMP_DIR}/$b" "$pdir"
 	done
 	script=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "Install-script" | zaf_far '{PLUGINDIR}' "$plugindir" )
-	[ -n "$script" ] && eval $script
+	[ -n "$script" ] && eval "$script"
 	cmd=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Install-cmd" | zaf_far '{PLUGINDIR}' "$plugindir" )
 	[ -n "$cmd" ] && $cmd
 }
@@ -99,14 +111,24 @@ zaf_ctrl_generate_cfg() {
 
 	items=$(zaf_ctrl_get_items <"$1")
 	for i in $items; do
-		block=$(zaf_ctrl_get_item_block <$1 $i)
-		ilock=$(echo $i | tr -d '[]*&;:')
-		cmd=$(zaf_block_get_option <$1 "Cmd")
-		[ -n "$cmd" ] && { echo "UserParameter=$2.${i},$cmd"; continue; }
-		cmd=$(zaf_block_get_option <$1 "Function")
-		[ -n "$cmd" ] && { echo "UserParameter=$2.${i},${ZAF_LIB_DIR}/preload.sh $cmd"; continue; }
-		cmd=$(zaf_block_get_moption <$1 "Script")
-		[ -n "$cmd" ] && { zaf_block_get_moption <$1 "Script" >${ZAF_PLUGIN_DIR}/$2/$ilock.sh;  echo "UserParameter=$2.${i},${ZAF_PLUGIN_DIR}/$ilock.sh"; continue; }
+            ilock=$(echo $i | tr -d '[]*&;:')
+            cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
+            if [ -n "$cmd" ]; then
+                echo "UserParameter=$2.${i},$cmd";
+                continue
+            fi
+            cmd=$(zaf_ctrl_get_item_option $1 $i "Function")
+            if [ -n "$cmd" ]; then
+                echo "UserParameter=$2.${i},${ZAF_LIB_DIR}/preload.sh $cmd";
+                continue;
+            fi
+            cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
+            if [ -n "$cmd" ]; then
+                zaf_ctrl_get_item_option $1 $i "Script" >${ZAF_TMP_DIR}/${ilock}.sh;
+                zaf_install_bin ${ZAF_TMP_DIR}/${ilock}.sh ${ZAF_PLUGINS_DIR}/$2/
+                echo "UserParameter=$2.${i},${ZAF_PLUGINS_DIR}/$2/${ilock}.sh";
+                continue;
+            fi
 	done
 }
 

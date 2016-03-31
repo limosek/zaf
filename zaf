@@ -1,25 +1,24 @@
 #!/bin/sh
 
-if [ -f /etc/zaf.conf  ]; then
-	. /etc/zaf.conf
+ZAF_CFG_FILE="/etc/zaf.conf"
+if [ -f $ZAF_CFG_FILE ]; then
+	. $ZAF_CFG_FILE
 else
-	echo "Missing config file /etc/zaf.conf! Exiting."
+	echo "Missing config file $ZAF_CFG_FILE! Exiting."
 	exit 2
 fi
+[ -d $(dirname $0)/.git ] && ZAF_LIB_DIR=$(dirname $0)/lib
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
 trap "rm -rif ${ZAF_TMP_DIR}" EXIT
 ! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
-
-# Devel version
-if [ -f $(dirname $0)/lib/zaf.lib.sh ]; then
-	ZAF_LIB_DIR=$(realpath $(dirname $0)/lib)
-fi
+[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=0
 
 . ${ZAF_LIB_DIR}/zaf.lib.sh
 . ${ZAF_LIB_DIR}/os.lib.sh
 . ${ZAF_LIB_DIR}/ctrl.lib.sh
+[ -f ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh ] && . ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh
 
 case $1 in
 
