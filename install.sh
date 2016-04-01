@@ -144,12 +144,18 @@ zaf_configure(){
 			fi
 		fi
 	fi
+	if which git >/dev/null; then
+		ZAF_GIT=1
+	else
+		ZAF_GIT=""
+	fi
 	zaf_get_option ZAF_CURL_INSECURE "Insecure curl (accept all certificates)" "1" "$1"
 	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$1"
 	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$1"
         zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$1"
 	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$1"
-	zaf_get_option ZAF_PLUGINS_REPO "Plugins reposiory" "https://github.com/limosek/zaf-plugins.git" "$1"
+	[ "${ZAF_GIT}" -eq 1 ] && zaf_get_option ZAF_PLUGINS_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$1"
+	zaf_get_option ZAF_PLUGINS_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$1"
 	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$1"
 	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$1"
 	! [ -d "${ZAF_AGENT_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_agentd.d" ] && ZAF_AGENT_CONFIGD="/etc/zabbix/zabbix_agentd.d"
@@ -159,11 +165,6 @@ zaf_configure(){
 	
 	if zaf_is_root && ! which $ZAF_AGENT_BIN >/dev/null; then
 		zaf_err "Zabbix agent not installed? Use ZAF_ZABBIX_AGENT_BIN env variable to specify location. Exiting."
-	fi
-	if which git >/dev/null; then
-		ZAF_GIT=1
-	else
-		ZAF_GIT=""
 	fi
 
         [ -n "$INSTALL_PREFIX" ] && zaf_install_dir "/etc"
@@ -181,7 +182,8 @@ zaf_configure(){
 	zaf_set_option ZAF_LIB_DIR "$ZAF_LIB_DIR"
         zaf_set_option ZAF_BIN_DIR "$ZAF_BIN_DIR"
 	zaf_set_option ZAF_PLUGINS_DIR "$ZAF_PLUGINS_DIR"
-	zaf_set_option ZAF_PLUGINS_REPO "$ZAF_PLUGINS_REPO"
+	zaf_set_option ZAF_PLUGINS_URL "$ZAF_PLUGINS_URL"
+	[ "${ZAF_GIT}" -eq 1 ] && zaf_set_option ZAF_PLUGINS_GITURL "$ZAF_PLUGINS_GITURL"
 	zaf_set_option ZAF_REPO_DIR "$ZAF_REPO_DIR"
 	zaf_set_option ZAF_AGENT_CONFIG "$ZAF_AGENT_CONFIG"
 	zaf_set_option ZAF_AGENT_CONFIGD "$ZAF_AGENT_CONFIGD"
@@ -241,7 +243,8 @@ install)
 	zaf_install_bin $(zaf_getrest zaf) ${ZAF_BIN_DIR}
         export INSTALL_PREFIX ZAF_CFG_FILE
         if zaf_is_root; then
-            ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf install zaf || zaf_err "Error installing zaf plugin."
+	    [ "${ZAF_GIT}" -eq 1 ] && ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf update
+            ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf reinstall zaf || zaf_err "Error installing zaf plugin."
             if zaf_is_root && ! zaf_check_agent_config; then
 		echo "Something is wrong with zabbix agent config."
 		echo "Ensure that zabbix_agentd reads ${ZAF_AGENT_CONFIG}"

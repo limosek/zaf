@@ -1,4 +1,8 @@
 
+# Hardcoded variables
+ZAF_VERSION="trunk"
+ZAF_URL="https://raw.githubusercontent.com/limosek/zaf/master/"
+
 ############################################ Common routines
 
 zaf_msg() {
@@ -14,6 +18,10 @@ zaf_err() {
 	logger -s -t zaf $@
         logger -s -t zaf "Exiting with error!"
         exit 1
+}
+
+zaf_version(){
+	echo $ZAF_VERSION
 }
 
 # Fetch url to stdout 
@@ -73,7 +81,7 @@ zaf_discovery_add_row(){
   shift;shift
   echo " {"
   while [ -n "$1" ]; do
-    echo -n '  "{#'$1'}":"'$2'" '
+    echo -n '  "'$1'":"'$2'" '
     shift;shift
     if [ -n "$1" ]; then
 	echo ","
@@ -135,8 +143,12 @@ zaf_check_agent_config() {
 # Update repo
 zaf_update_repo() {
 	[ "$ZAF_GIT" != 1 ] && { zaf_err "Git is not installed. Exiting."; }
-	! [ -d ${ZAF_REPO_DIR} ] && git clone "${ZAF_PLUGINS_REPO}" "${ZAF_REPO_DIR}"
-	[ -n "${ZAF_PLUGINS_REPO}" ] && cd ${ZAF_REPO_DIR} && git pull
+	if [ -z "${ZAF_PLUGINS_GITURL}" ] || [ -z "${ZAF_REPO_DIR}" ]; then
+		zaf_err "This system is not configured for git repository."
+	else
+		[ ! -d "${ZAF_REPO_DIR}" ] && git clone "${ZAF_PLUGINS_GITURL}" "${ZAF_REPO_DIR}"
+		(cd ${ZAF_REPO_DIR} && git pull)
+	fi
 }
 
 # Construct url from plugin name
@@ -154,7 +166,7 @@ zaf_get_plugin_url() {
 			if [ -d "${ZAF_REPO_DIR}/$1" ]; then
 				url="${ZAF_REPO_DIR}/$1"
 			else
-				url="${ZAF_PLUGINS_REPO}/$1";
+				url="${ZAF_PLUGINS_URL}/$1";
 			fi
 		fi
 	fi
@@ -206,8 +218,9 @@ zaf_install_plugin() {
 		if zaf_prepare_plugin "$1" $plugindir; then
 			[ "$ZAF_DEBUG" -gt 0 ] && zaf_plugin_info "${control}"
 			zaf_ctrl_check_deps "${control}"
-			zaf_ctrl_install "${control}" "${plugin}" 
-			zaf_ctrl_generate_cfg "${control}" "${plugin}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+			zaf_ctrl_install "$1" "${control}" "${plugindir}" 
+			zaf_ctrl_generate_cfg "${control}" "${plugin}" \
+			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 		else
 			zaf_err "Cannot install plugin $plugin to $plugindir!"
@@ -228,7 +241,6 @@ zaf_list_plugins() {
 }
 
 zaf_is_plugin() {
-	[ -d "$1" ] && [ -f "$1/control.zaf" ] && return
 	[ -d "$ZAF_PLUGINS_DIR/$1" ] && [ -f "$ZAF_PLUGINS_DIR/$1/control.zaf" ] && return
 	false
 }
@@ -252,23 +264,37 @@ zaf_plugin_version() {
 }
 
 zaf_list_plugin_items() {
-	if [ -z "$1" ]; then
-		echo "Missing plugin name";
-		exit 1
+	local items
+	local i
+	local p
+	local key
+
+	if ! zaf_is_plugin "$1"; then
+		zaf_err "Missing plugin name or plugin $1 unknown. ";
 	fi
 	plugindir="${ZAF_PLUGINS_DIR}/$1"
-	cfile="$plugindir/control"
-	if [ -d "$plugindir" ] ; then
-		zaf_ctrl_get_option "$cfile" Item
-	else
-		echo "Plugin $1 not installed" 
-	fi
+	cfile="$plugindir/control.zaf"
+	items=$(zaf_ctrl_get_items <$cfile)
+	for i in $items; do
+		p=$(zaf_ctrl_get_item_option $cfile $i "Parameters")
+		if [ -n "$p" ]; then
+			key="$1.$i[]"
+		else
+			key="$1.$i"
+		fi
+		echo -n "$key "
+	done
+	echo
 }
 
 zaf_list_items() {
 	for p in $(zaf_list_plugins); do
-		zaf_list_plugin_items $p
+		echo $p: $(zaf_list_plugin_items $p)
 	done
+}
+
+zaf_test_item() {
+	$ZAF_AGENT_BIN -t "$1"
 }
 
 zaf_remove_plugin() {

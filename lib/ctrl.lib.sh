@@ -1,8 +1,6 @@
 # Control file related functions
 
-# Get block from stdin
-# $1 option
-# $2 name
+# Get item list from control on stdin
 zaf_ctrl_get_items() {
 	grep '^Item ' | cut -d ' ' -f 2 | cut -d ':' -f 1 | tr '\r\n' ' '
 }
@@ -57,14 +55,16 @@ zaf_block_get_option() {
 # $1 - control file
 # $2 - option name
 zaf_ctrl_get_global_option() {
-	zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" || zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
+	zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" \
+	|| zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
 }
 # Get item specific option (single or multiline)
 # $1 - control file
 # $2 - item name
 # $3 - option name
 zaf_ctrl_get_item_option() {
-	zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" || zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
+	zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" \
+	|| zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
 }
 
 # Check dependencies based on control file
@@ -82,24 +82,24 @@ zaf_ctrl_check_deps() {
 }
 
 # Install binaries from control
-# $1 control
-# $2 plugindir
+# $1 pluginurl
+# $2 control
+# $3 plugindir
 zaf_ctrl_install() {
 	local binaries
 	local pdir
 	local script
 	local cmd
 
-	pdir="$2"
-	export ZAF_PLUGIN_DIR="$pdir"
-	binaries=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Install-bin")
+	pdir="$3"
+	binaries=$(zaf_ctrl_get_global_block <$2 | zaf_block_get_option "Install-bin")
 	for b in $binaries; do
-		zaf_fetch_url "$url/$b" >"${ZAF_TMP_DIR}/$b"
+		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
                 zaf_install_bin "${ZAF_TMP_DIR}/$b" "$pdir"
 	done
-	script=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "Install-script")
+	script=$(zaf_ctrl_get_global_block <$2 | zaf_block_get_moption "Install-script")
 	[ -n "$script" ] && eval "$script"
-	cmd=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Install-cmd")
+	cmd=$(zaf_ctrl_get_global_block <$2 | zaf_block_get_option "Install-cmd")
 	[ -n "$cmd" ] && $cmd
 }
 
@@ -109,33 +109,41 @@ zaf_ctrl_install() {
 zaf_ctrl_generate_cfg() {
 	local items
 	local cmd
+	local iscript
 	local ikey
 	local lock
 
 	items=$(zaf_ctrl_get_items <"$1")
 	for i in $items; do
-            ikey=$(echo $i | tr -d '[]*&;:')
+            iscript=$(echo $i | tr -d '[]*&;:')
+	    params=$(zaf_ctrl_get_item_option $1 $i "Parameters")
+	    if [ -n "$params" ]; then
+		ikey="$2.$i[*]"
+	    else
+		ikey="$2.$i"
+	    fi
 	    lock=$(zaf_ctrl_get_item_option $1 $i "Lock")
 	    if [ -n "$lock" ]; then
 		lock="${ZAF_LIB_DIR}/zaflock $lock "
 	    fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
             if [ -n "$cmd" ]; then
-                echo "UserParameter=$2.${i},$lock$cmd";
+                echo "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd";
                 continue
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Function")
             if [ -n "$cmd" ]; then
-                echo "UserParameter=$2.${i},${ZAF_LIB_DIR}/preload.sh $lock$cmd";
+                echo "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd";
                 continue;
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
             if [ -n "$cmd" ]; then
-                zaf_ctrl_get_item_option $1 $i "Script" >${ZAF_TMP_DIR}/${ikey}.sh;
+                zaf_ctrl_get_item_option $1 $i "Script" >${ZAF_TMP_DIR}/${iscript}.sh;
                 zaf_install_bin ${ZAF_TMP_DIR}/${ikey}.sh ${ZAF_PLUGINS_DIR}/$2/
-                echo "UserParameter=$2.${i},${ZAF_LIB_DIR}/preload.sh $lock${ZAF_PLUGINS_DIR}/$2/${ikey}.sh";
+                echo "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh";
                 continue;
             fi
+	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"
 	done
 }
 

@@ -1,9 +1,5 @@
 #!/bin/sh
 
-# Hardcoded variables
-ZAF_VERSION="trunk"
-ZAF_URL="https://raw.githubusercontent.com/limosek/zaf/master/"
-
 ZAF_CFG_FILE="/etc/zaf.conf"
 if [ -f $ZAF_CFG_FILE ]; then
 	. $ZAF_CFG_FILE
@@ -11,7 +7,6 @@ else
 	echo "Missing config file $ZAF_CFG_FILE! Exiting."
 	exit 2
 fi
-[ -d $(dirname $0)/.git ] && ZAF_LIB_DIR=$(dirname $0)/lib
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
@@ -19,10 +14,17 @@ trap "rm -rif ${ZAF_TMP_DIR}" EXIT
 ! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 
+if [ -f ./lib/zaf.lib.sh ]; then
+. ./lib/zaf.lib.sh
+. ./lib/os.lib.sh
+. ./lib/ctrl.lib.sh
+[ -f ./lib/zaf.${ZAF_OS}.sh ] && . ./lib/zaf.${ZAF_OS}.sh
+else 
 . ${ZAF_LIB_DIR}/zaf.lib.sh
 . ${ZAF_LIB_DIR}/os.lib.sh
 . ${ZAF_LIB_DIR}/ctrl.lib.sh
 [ -f ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh ] && . ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh
+fi
 
 case $1 in
 
@@ -43,17 +45,21 @@ show)
 		if zaf_list_plugins | grep -q "^$2"; then
 			zaf_plugin_info $ZAF_PLUGINS_DIR/$2/control.zaf
 		else
-			zaf_prepare_plugin "$2" "$ZAF_TMP_DIR/plugin"
-			zaf_plugin_info "$ZAF_TMP_DIR/plugin/control.zaf"
+			if echo $2 |grep -q ^http; then
+				zaf_prepare_plugin "$2" "$ZAF_TMP_DIR/plugin"
+				zaf_plugin_info "$ZAF_TMP_DIR/plugin/control.zaf"
+			else
+				zaf_err "Plugin $2 not installed."
+			fi
 		fi
 	fi
 	;;
 
-list)
+plugins)
 	zaf_list_plugins
 	;;
 
-list-items)
+items)
 	if [ -z "$2" ]; then
 		zaf_list_items
 	else
@@ -61,8 +67,18 @@ list-items)
 	fi
 	;;
 
-test-items)
-	zaf_show_plugin "$2" tst
+test)
+	if [ -n "$2" ]; then
+		shift
+		plugins="$@"
+	else
+		plugins="$(zaf_list_plugins)"
+	fi
+	for p in $plugins; do
+		for i in $(zaf_list_plugin_items $p); do 
+			echo $i: $(zaf_test_item $i)
+		done
+	done
 	;;
 
 install)
@@ -84,7 +100,7 @@ reinstall)
 	[ -z "$@" ] && echo "$0 reinstall plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
-			zaf_remove_plugin "$p"
+			zaf_remove_plugin "$(basename $p)"
 			reinstalled=1
 		fi
 		zaf_install_plugin "$p"
@@ -115,20 +131,26 @@ self-upgrade)
 	;;
 	
 self-remove)
-	if [ "$2" = "force" ]; then  
-	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} /usr/bin/zaf ${ZAF_AGENT_CONFIGD}/zaf_*
+	. /etc/zaf.conf
+	if [ "$2" = "force" ]; then
+	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \
+		${ZAF_BIN_DIR}/zaf ${ZAF_AGENT_CONFIGD}/zaf_*
 	else
 	  echo "This will remove zaf from this computer and erase all configuration."
+	  echo "This command will be executed:"
+	  echo "rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \
+		${ZAF_BIN_DIR}/zaf ${ZAF_AGENT_CONFIGD}/zaf_*"
+	  echo 
 	  echo "To continue, please do $0 self-remove force"
 	fi
       ;;
 
 *)
 	echo "$0 update			To update repo" 
-	echo "$0 list			To list installed plugins"
+	echo "$0 plugins		To list installed plugins"
 	echo "$0 show [plugin]		To show installed plugins or plugin info"
-	echo "$0 list-items [plugin]	To list all suported items [for plugin]"
-	echo "$0 test-items plugin	To test all suported items for plugin"
+	echo "$0 items [plugin]		To list all suported items [for plugin]"
+	echo "$0 test [plugin]		To test all suported items [for plugin]"
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
 	echo "$0 self-upgrade		To self-upgrade zaf"
