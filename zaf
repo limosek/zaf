@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Hardcoded variables
+ZAF_VERSION="trunk"
+ZAF_URL="https://raw.githubusercontent.com/limosek/zaf/master/"
+
 ZAF_CFG_FILE="/etc/zaf.conf"
 if [ -f $ZAF_CFG_FILE ]; then
 	. $ZAF_CFG_FILE
@@ -10,10 +14,10 @@ fi
 [ -d $(dirname $0)/.git ] && ZAF_LIB_DIR=$(dirname $0)/lib
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
-ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
+ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
 trap "rm -rif ${ZAF_TMP_DIR}" EXIT
 ! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
-[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=0
+[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 
 . ${ZAF_LIB_DIR}/zaf.lib.sh
 . ${ZAF_LIB_DIR}/os.lib.sh
@@ -32,9 +36,16 @@ update)
 
 show)
 	if [ -z "$2" ]; then
-		zaf_show_installed_plugins
-	else
-		zaf_show_plugin "$2"
+		zaf_list_plugins | while read plugin; do
+			zaf_plugin_info $ZAF_PLUGINS_DIR/$plugin/control.zaf
+		done
+	else		
+		if zaf_list_plugins | grep -q "^$2"; then
+			zaf_plugin_info $ZAF_PLUGINS_DIR/$2/control.zaf
+		else
+			zaf_prepare_plugin "$2" "$ZAF_TMP_DIR/plugin"
+			zaf_plugin_info "$ZAF_TMP_DIR/plugin/control.zaf"
+		fi
 	fi
 	;;
 
@@ -58,20 +69,48 @@ install)
 	shift;
 	[ -z "$@" ] && echo "$0 install plugin [plugin]..."
 	for p in $@; do
+		if zaf_is_plugin "$p"; then
+			zaf_wrn "Plugin $p already installed. Skipping installation."
+			continue
+		fi
 		zaf_install_plugin "$p"
+		installed=1
 	done
+	[ -n "$installed" ] && zaf_is_root && zaf_restart_agent
+	;;
+
+reinstall)
+	shift;
+	[ -z "$@" ] && echo "$0 reinstall plugin [plugin]..."
+	for p in $@; do
+		if zaf_is_plugin "$p"; then
+			zaf_remove_plugin "$p"
+			reinstalled=1
+		fi
+		zaf_install_plugin "$p"
+		reinstalled=1
+	done
+	[ -n "$reinstalled" ] && zaf_is_root && zaf_restart_agent
 	;;
 
 remove)
-	zaf_remove_plugin "$2"
+	shift;
+	[ -z "$@" ] && echo "$0 remove plugin [plugin]..."
+	for p in $@; do
+		if zaf_is_plugin "$p"; then
+			zaf_remove_plugin "$p"
+			removed=1
+		fi
+	done
+	[ -n "$removed" ] && zaf_is_root && zaf_restart_agent
 	;;
 
 self-upgrade)
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
-	if zaf_fetch_url https://raw.githubusercontent.com/limosek/zaf/master/install.sh >/tmp/zaf-installer/install.sh; then
+	if zaf_fetch_url $ZAF_URL/install.sh >/tmp/zaf-installer/install.sh; then
 		cd /tmp/zaf-installer && ./install.sh
 	else
-		echo "Cannot fetch uri https://raw.githubusercontent.com/limosek/zaf/master/install.sh!"; 
+		echo "Cannot fetch uri $ZAF_URL/install.sh!"; 
 	fi
 	;;
 	

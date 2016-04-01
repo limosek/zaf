@@ -28,7 +28,7 @@ done
 
 [ -z "$ZAF_CFG_FILE" ] && ZAF_CFG_FILE=$INSTALL_PREFIX/etc/zaf.conf
 [ -n "$C_ZAF_DEBUG" ] && ZAF_DEBUG=$C_ZAF_DEBUG
-[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=0
+[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 
 if [ -f $(dirname $0)/lib/zaf.lib.sh ]; then
     . $(dirname $0)/lib/zaf.lib.sh
@@ -149,7 +149,7 @@ zaf_configure(){
 	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$1"
         zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$1"
 	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$1"
-	zaf_get_option ZAF_PLUGINS_REPO "Plugins reposiory" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$1"
+	zaf_get_option ZAF_PLUGINS_REPO "Plugins reposiory" "https://github.com/limosek/zaf-plugins.git" "$1"
 	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$1"
 	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$1"
 	! [ -d "${ZAF_AGENT_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_agentd.d" ] && ZAF_AGENT_CONFIGD="/etc/zabbix/zabbix_agentd.d"
@@ -233,8 +233,8 @@ install)
 	zaf_install $(zaf_getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}
         zaf_install $(zaf_getrest lib/os.lib.sh) ${ZAF_LIB_DIR}
         zaf_install $(zaf_getrest lib/ctrl.lib.sh) ${ZAF_LIB_DIR}
-	zaf_install $(zaf_getrest lib/jshn.sh) ${ZAF_LIB_DIR}
 	zaf_install_bin $(zaf_getrest lib/zaflock) ${ZAF_LIB_DIR}
+	zaf_install_bin $(zaf_getrest lib/preload.sh) ${ZAF_LIB_DIR}
 	zaf_install_dir ${ZAF_TMP_DIR}/p/zaf
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
         zaf_install_dir ${ZAF_BIN_DIR}
