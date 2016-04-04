@@ -114,7 +114,7 @@ zaf_set_agent_option() {
 		zaf_wrn "Moving option $option to zaf config part."
 		sed -i "s/$option=/#$option=/" $ZAF_AGENT_CONFIG
 	fi
-	echo "$option=$value" >> "$ZAF_AGENT_CONFIGD/zaf_options.conf"	
+	[ -n "$2" ] && echo "$option=$value" >> "$ZAF_AGENT_CONFIGD/zaf_options.conf"	
 }
 
 # Automaticaly configure agent if supported
