@@ -33,6 +33,7 @@ check-agent-config)
 	;;
 
 update)
+	zaf_wrn "Updating repository ${ZAF_PLUGINS_GITURL}..."
 	zaf_update_repo
 	;;
 

@@ -171,8 +171,8 @@ zaf_configure(){
 	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$1"
 	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$1"
 	
-	if zaf_is_root && ! which $ZAF_AGENT_BIN >/dev/null; then
-		zaf_err "Zabbix agent not installed? Use ZAF_ZABBIX_AGENT_BIN env variable to specify location. Exiting."
+	if zaf_is_root && ! [ -x $ZAF_AGENT_BIN ]; then
+		zaf_err "Zabbix agent ($ZAF_AGENT_BIN) not installed? Use ZAF_AGENT_BIN env variable to specify location. Exiting."
 	fi
 
         [ -n "$INSTALL_PREFIX" ] && zaf_install_dir "/etc"
@@ -250,7 +250,7 @@ install)
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
         zaf_install_dir ${ZAF_BIN_DIR}
 	zaf_install_bin $(zaf_getrest zaf) ${ZAF_BIN_DIR}
-        export INSTALL_PREFIX ZAF_CFG_FILE
+        export INSTALL_PREFIX ZAF_CFG_FILE ZAF_DEBUG
         if zaf_is_root; then
 	    [ "${ZAF_GIT}" = 1 ] && ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf update
             ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf reinstall zaf || zaf_err "Error installing zaf plugin."
