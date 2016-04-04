@@ -51,7 +51,7 @@ Now everything was tested on Debian and OpenWrt. If somebody is interrested in, 
 Suppose you want to autoinstall agent on clean system. You need only curl installed. Everything else is one-cmd process.
 This command will install zaf, install zabbix-agent if necessary and sets zabbix variables on agent to reach server. This command can be automatized by puppet or another deploying system.
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s \
+curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s auto \
   Z_Server=zabbix.server.local \
   Z_ServerActive=zabbix.server.local \
   Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 \
