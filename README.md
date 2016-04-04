@@ -31,7 +31,8 @@ curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
 ### Install options and autoconfiguration
 General parameters for install.sh on any system (simplest way how to install)
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Zaf-Options]
+curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | \
+   sh -s {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Zaf-Options]
 ```
 or use git version:
 ```
@@ -41,14 +42,20 @@ git clone https://github.com/limosek/zaf.git
  Zaf-Options: ZAF_OPT=value [...]
 ```
 
-So you can pass ANY configuration of your zabbix agent directly to installer. Installer will try to autoguess suitable config options for your system.
+So you can pass ANY configuration of your zabbix agent directly to installer prefixing it with *Z_*. Please note that options are *Case Sensitive*! 
+Next to this, you can pass ANY zaf config options by *ZAF_* prefix. Yes, we need some more documentation of ZAF options. Please look at least here: https://github.com/limosek/zaf/blob/master/install.sh#L160
+Installer will try to autoguess suitable config options for your system.
 Now everything was tested on Debian and OpenWrt. If somebody is interrested in, you can help and test with some rpm specific functions.
 
 ### Example
 Suppose you want to autoinstall agent on clean system. You need only curl installed. Everything else is one-cmd process.
 This command will install zaf, install zabbix-agent if necessary and sets zabbix variables on agent to reach server. This command can be automatized by puppet or another deploying system.
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s Z_Server=zabbix.server.local Z_ServerActive=zabbix.server.local Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 ZAF_PLUGINS_GITURL="git://gitserver.local"
+curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s \
+  Z_Server=zabbix.server.local \
+  Z_ServerActive=zabbix.server.local \
+  Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 \
+  ZAF_PLUGINS_GITURL="git://gitserver.local"
 ```
 
 ## Zaf plugin
