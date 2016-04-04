@@ -12,7 +12,7 @@ if ! [ "$(basename $0)" = "install.sh" ]; then
 	set -e
 	mkdir -p /tmp/zaf-installer \
 	&& cd /tmp/zaf-installer \
-	&& (for i in lib/zaf.lib.sh lib/os.lib.sh lib/ctrl.lib.sh install.sh ; do curl -f -k -s -L -o - "$url/$i"; done) >install.sh \
+	&& (for i in lib/zaf.lib.sh lib/os.lib.sh lib/ctrl.lib.sh install.sh ; do echo  curl -f -k -s -L -o - "$url/$i" >&2; curl -f -k -s -L -o - "$url/$i"; done) >install.sh \
 	&& chmod +x install.sh \
 	&& exec ./install.sh $auto "$@"
 	exit

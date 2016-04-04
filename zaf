@@ -68,6 +68,10 @@ items)
 	;;
 
 test)
+	if echo $2|grep -q '\.'; then
+		zaf_test_item "$2"
+		exit
+	fi
 	if [ -n "$2" ]; then
 		shift
 		plugins="$@"
@@ -151,7 +155,7 @@ self-remove)
 	echo "$0 plugins		To list installed plugins"
 	echo "$0 show [plugin]		To show installed plugins or plugin info"
 	echo "$0 items [plugin]		To list all suported items [for plugin]"
-	echo "$0 test [plugin]		To test all suported items [for plugin]"
+	echo "$0 test [plugin[.item]]	To test all suported items [for plugin]"
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
 	echo "$0 self-upgrade		To self-upgrade zaf"
