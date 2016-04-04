@@ -125,7 +125,7 @@ zaf_configure_agent() {
 	local value
 
         zaf_install_dir "$ZAF_AGENT_CONFIGD"
-	zaf_touch "$ZAF_AGENT_CONFIGD/zaf_options.conf" || zaf_err "Cannot access $ZAF_AGENT_CONFIGD/zaf_options.conf"
+	echo -n >"$ZAF_AGENT_CONFIGD/zaf_options.conf" || zaf_err "Cannot access $ZAF_AGENT_CONFIGD/zaf_options.conf"
 	for pair in "$@"; do
 		echo $pair | grep -q '^Z\_' || continue # Skip non Z_ vars
 		option=$(echo $pair|cut -d '=' -f 1|cut -d '_' -f 2)
