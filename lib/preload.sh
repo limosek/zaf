@@ -16,6 +16,7 @@ export ZAF_LIB_DIR
 export ZAF_TMP_DIR
 export ZAF_PLUGINS_DIR
 
-[ -n "$*" ] && $@
+[ "$(basename $0)" = "preload.sh" ] && [ -n "$*" ] && $@
+
 
 

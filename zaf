@@ -83,7 +83,7 @@ test)
 
 install)
 	shift;
-	[ -z "$@" ] && echo "$0 install plugin [plugin]..."
+	[ -z "$1" ] && echo "$0 install plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
 			zaf_wrn "Plugin $p already installed. Skipping installation."
@@ -97,7 +97,7 @@ install)
 
 reinstall)
 	shift;
-	[ -z "$@" ] && echo "$0 reinstall plugin [plugin]..."
+	[ -z "$1" ] && echo "$0 reinstall plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
 			zaf_remove_plugin "$(basename $p)"
@@ -111,7 +111,7 @@ reinstall)
 
 remove)
 	shift;
-	[ -z "$@" ] && echo "$0 remove plugin [plugin]..."
+	[ -z "$1" ] && echo "$0 remove plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
 			zaf_remove_plugin "$p"
@@ -124,7 +124,7 @@ remove)
 self-upgrade)
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
 	if zaf_fetch_url $ZAF_URL/install.sh >/tmp/zaf-installer/install.sh; then
-		cd /tmp/zaf-installer && ./install.sh
+		cd /tmp/zaf-installer && exec ./install.sh
 	else
 		echo "Cannot fetch uri $ZAF_URL/install.sh!"; 
 	fi
@@ -146,6 +146,7 @@ self-remove)
       ;;
 
 *)
+	echo "$0 Version ${ZAF_VERSION}. Please use some of this commands:"
 	echo "$0 update			To update repo" 
 	echo "$0 plugins		To list installed plugins"
 	echo "$0 show [plugin]		To show installed plugins or plugin info"

@@ -199,6 +199,10 @@ zaf_plugin_info() {
 # $1 is url, directory or plugin name (will be searched in default plugin dir). 
 # $2 is directory to prepare. 
 zaf_prepare_plugin() {
+	local url
+	local plugindir
+	local control
+
 	url=$(zaf_get_plugin_url "$1")/control.zaf
 	plugindir="$2"
 	control=${plugindir}/control.zaf
@@ -212,13 +216,20 @@ zaf_prepare_plugin() {
 }
 
 zaf_install_plugin() {
+	local url
+	local plugin
+	local plugindir
+	local control
+
 	if zaf_prepare_plugin "$1" "${ZAF_TMP_DIR}/plugin"; then
+		url=$(zaf_get_plugin_url "$1")
                 plugin=$(zaf_ctrl_get_global_block <"${ZAF_TMP_DIR}/plugin/control.zaf" | zaf_block_get_option Plugin)
 		plugindir="${ZAF_PLUGINS_DIR}"/$plugin
 		if zaf_prepare_plugin "$1" $plugindir; then
+			control=${plugindir}/control.zaf
 			[ "$ZAF_DEBUG" -gt 0 ] && zaf_plugin_info "${control}"
 			zaf_ctrl_check_deps "${control}"
-			zaf_ctrl_install "$1" "${control}" "${plugindir}" 
+			zaf_ctrl_install "$url" "${control}" "${plugindir}"
 			zaf_ctrl_generate_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
