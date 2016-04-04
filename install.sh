@@ -99,9 +99,17 @@ zaf_getrest(){
 # Set config option in zabbix agent
 # $1 option
 # $2 value
-zaf_agent_set_option() {
+# $3 if nonempty, do not remove opion from config, just add to the end
+zaf_set_agent_option() {
 	local option="$1"
 	local value="$2"
+	if [ -n "$3" ]; then
+		if ! grep -q "^$1=$2" $ZAF_AGENT_CONFIG; then
+			zaf_dbg "Adding option $option to $ZAF_AGENT_CONFIG."
+			echo "$option=$value" >>$ZAF_AGENT_CONFIG
+		fi
+		return
+	fi 
 	if grep ^$option\= $ZAF_AGENT_CONFIG; then
 		zaf_wrn "Moving option $option to zaf config part."
 		sed -i "s/$option=/#$option=/" $ZAF_AGENT_CONFIG
@@ -122,7 +130,7 @@ zaf_configure_agent() {
 		echo $pair | grep -q '^Z\_' || continue # Skip non Z_ vars
 		option=$(echo $pair|cut -d '=' -f 1|cut -d '_' -f 2)
 		value=$(echo $pair|cut -d '=' -f 2-)
-		zaf_agent_set_option "$option" "$value"
+		zaf_set_agent_option "$option" "$value"
 	done
 }
 
@@ -228,6 +236,7 @@ reconf)
 install)
         zaf_configure auto
         zaf_configure_agent "$@"
+	zaf_set_agent_option "Include" "$ZAF_AGENT_CONFIGD" append
 	rm -rif ${ZAF_TMP_DIR}
 	mkdir -p ${ZAF_TMP_DIR}
 	zaf_install_dir ${ZAF_LIB_DIR}
@@ -245,7 +254,7 @@ install)
         if zaf_is_root; then
 	    [ "${ZAF_GIT}" -eq 1 ] && ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf update
             ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf reinstall zaf || zaf_err "Error installing zaf plugin."
-            if zaf_is_root && ! zaf_check_agent_config; then
+            if zaf_is_root && ! zaf_test_item zaf.framework_version; then
 		echo "Something is wrong with zabbix agent config."
 		echo "Ensure that zabbix_agentd reads ${ZAF_AGENT_CONFIG}"
 		echo "and there is Include=${ZAF_AGENT_CONFIGD} directive inside."

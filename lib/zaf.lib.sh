@@ -9,13 +9,13 @@ zaf_msg() {
 	echo $@
 }
 zaf_dbg() {
-	[ "$ZAF_DEBUG" -ge "2" ] && logger -s -t zaf $@
+	[ "$ZAF_DEBUG" -ge "2" ] && logger -s -t zaf -- $@
 }
 zaf_wrn() {
-	[ "$ZAF_DEBUG" -ge "1" ] && logger -s -t zaf $@
+	[ "$ZAF_DEBUG" -ge "1" ] && logger -s -t zaf -- $@
 }
 zaf_err() {
-	logger -s -t zaf $@
+	logger -s -t zaf -- $@
         logger -s -t zaf "Exiting with error!"
         exit 1
 }
@@ -40,7 +40,7 @@ zaf_fetch_url() {
 	case $scheme in
 	http|https|ftp|file)
 		[ "${ZAF_CURL_INSECURE}" = "1" ] && insecure="-k"
-		zaf_msg curl $insecure -f -s -L -o - "$1"
+		zaf_dbg curl $insecure -f -s -L -o - $1
 		curl $insecure -f -s -L -o - "$1"
 	;;
 	esac 
