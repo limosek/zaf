@@ -128,7 +128,7 @@ remove)
 self-upgrade)
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
 	if zaf_fetch_url $ZAF_URL/install.sh >/tmp/zaf-installer/install.sh; then
-		cd /tmp/zaf-installer && chmod +x ./install.sh && exec ./install.sh
+		cd /tmp/zaf-installer && chmod +x ./install.sh && exec ./install.sh auto
 	else
 		echo "Cannot fetch uri $ZAF_URL/install.sh!"; 
 	fi
