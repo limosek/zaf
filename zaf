@@ -127,11 +127,18 @@ remove)
 
 self-upgrade)
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
-	if zaf_fetch_url $ZAF_URL/install.sh >/tmp/zaf-installer/install.sh; then
-		cd /tmp/zaf-installer && chmod +x ./install.sh && exec ./install.sh auto
-	else
-		echo "Cannot fetch uri $ZAF_URL/install.sh!"; 
+	if ! which curl >/dev/null;
+	then
+		zaf_err "Curl not found. Cannot continue. Please install it."
 	fi
+	[ -z "$2" ] && auto=auto
+	set -e
+	mkdir -p /tmp/zaf-installer \
+	&& cd /tmp/zaf-installer \
+	&& (for i in lib/zaf.lib.sh lib/os.lib.sh lib/ctrl.lib.sh install.sh ; do echo  curl -f -k -s -L -o - "$ZAF_URL/$i" >&2; curl -f -k -s -L -o - "$ZAF_URL/$i"; done) >install.sh \
+	&& chmod +x install.sh \
+	&& exec ./install.sh $auto "$@"
+	exit
 	;;
 	
 self-remove)
