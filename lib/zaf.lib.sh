@@ -261,16 +261,18 @@ zaf_discovery_plugins() {
 }
 
 zaf_plugin_version() {
+	local plugindir
+	local cfile
+
 	if [ -z "$1" ]; then
-		echo "Missing plugin name";
-		exit 1
+		zaf_err "Missing plugin name.";
 	fi
-	plugindir="${ZAF_PLUGINS_DIR}/$1"
-	cfile="$plugindir/control"
-	if [ -d "$plugindir" ] ; then
-		zaf_ctrl_get_option "$cfile" Version
+	if zaf_is_plugin "$1"; then
+		plugindir="${ZAF_PLUGINS_DIR}/$1"
+		cfile="$plugindir/control.zaf"
+		zaf_ctrl_get_global_option $cfile Version
 	else
-		echo "Plugin $1 not installed" 
+		zaf_err "Plugin $1 not installed."
 	fi
 }
 
