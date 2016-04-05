@@ -134,12 +134,12 @@ zaf_ctrl_generate_cfg() {
 	    fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
             if [ -n "$cmd" ]; then
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd $args";
+                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd";
                 continue
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Function")
             if [ -n "$cmd" ]; then
-                $(which echo) -E "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd $args";
+                $(which echo) -E "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd";
                 continue;
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
