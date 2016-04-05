@@ -123,6 +123,7 @@ zaf_configure_agent() {
 	local pair
 	local option
 	local value
+	local options
 
         zaf_install_dir "$ZAF_AGENT_CONFIGD"
 	echo -n >"$ZAF_AGENT_CONFIGD/zaf_options.conf" || zaf_err "Cannot access $ZAF_AGENT_CONFIGD/zaf_options.conf"
@@ -131,7 +132,9 @@ zaf_configure_agent() {
 		option=$(echo $pair|cut -d '=' -f 1|cut -d '_' -f 2)
 		value=$(echo $pair|cut -d '=' -f 2-)
 		zaf_set_agent_option "$option" "$value"
+		options="$options Z_$option='$value'"
 	done
+	zaf_set_option ZAF_AGENT_OPTIONS "${options}"
 }
 
 zaf_configure(){
@@ -145,6 +148,7 @@ zaf_configure(){
 	zaf_get_option ZAF_OS "Operating system to use" "$ZAF_OS" "$1"
 	zaf_get_option ZAF_OS_CODENAME "Operating system codename" "$ZAF_OS_CODENAME" "$1"
 	zaf_get_option ZAF_AGENT_PKG "Zabbix agent package" "$ZAF_AGENT_PKG" "$1"
+	zaf_get_option ZAF_AGENT_OPTIONS "Zabbix options to set in cfg" "$ZAF_AGENT_OPTIONS" "$1"
 	if zaf_is_root && [ -n "$ZAF_AGENT_PKG" ]; then
 		if ! zaf_os_specific zaf_check_deps "$ZAF_AGENT_PKG"; then
 			if [ "$1" = "auto" ]; then
@@ -235,7 +239,7 @@ reconf)
         ;;
 install)
         zaf_configure auto
-        zaf_configure_agent "$@"
+        zaf_configure_agent $ZAF_AGENT_OPTIONS "$@"
 	zaf_set_agent_option "Include" "$ZAF_AGENT_CONFIGD" append
 	rm -rif ${ZAF_TMP_DIR}
 	mkdir -p ${ZAF_TMP_DIR}
