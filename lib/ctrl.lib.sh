@@ -92,14 +92,14 @@ zaf_ctrl_install() {
 	local cmd
 
 	pdir="$3"
-	binaries=$(zaf_ctrl_get_global_block <$2 | zaf_block_get_option "Install-bin")
+	binaries=$(zaf_ctrl_get_global_option $2 "Install-bin")
 	for b in $binaries; do
 		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
                 zaf_install_bin "${ZAF_TMP_DIR}/$b" "$pdir"
 	done
-	script=$(zaf_ctrl_get_global_block <$2 | zaf_block_get_moption "Install-script")
+	script=$(zaf_ctrl_get_global_option $2 "Install-script")
 	[ -n "$script" ] && eval "$script"
-	cmd=$(zaf_ctrl_get_global_block <$2 | zaf_block_get_option "Install-cmd")
+	cmd=$(zaf_ctrl_get_global_option $2 "Install-cmd")
 	[ -n "$cmd" ] && $cmd
 }
 

@@ -8,6 +8,12 @@ zaf_configure_os_openwrt() {
     ZAF_CURL_INSECURE=1
 }
 
+zaf_configure_os_freebsd() {
+    ZAF_AGENT_PKG="zabbix3-agent"
+    ZAF_AGENT_CONFIG="/usr/local/etc/zabbix3/zabbix_agentd.conf"
+    ZAF_AGENT_CONFIGD="/usr/local/etc/zabbix3/zabbix_agentd.conf.d/"
+}
+
 zaf_detect_system() {
 	if which dpkg >/dev/null; then
 		ZAF_PKG=dpkg
@@ -29,12 +35,18 @@ zaf_detect_system() {
 		ZAF_OS="$(echo $DISTRIB_ID|tr '[:upper:]' '[:lower:]')"
 		ZAF_OS_CODENAME="$(echo $DISTRIB_CODENAME|tr '[:upper:]' '[:lower:]')"
 		return	
+	else if which pkg >/dev/null; then
+		ZAF_PKG="pkg"
+		ZAF_OS="freebsd"
+		ZAF_OS_CODENAME="$(freebsd-version|cut -d '-' -f 1)"
+		return	
 	else
 		ZAF_PKG="unknown"
 		ZAF_OS="unknown"
 		ZAF_OS_CODENAME="unknown"
 		ZAF_AGENT_PKG=""
                 return
+	   fi
 	  fi
 	 fi
 	fi
@@ -134,6 +146,15 @@ zaf_check_deps_opkg() {
 	local p
 	for p in $*; do
 		opkg info $p | grep -q 'Package:' || { echo "Missing package $p" >&2; return 1; }
+	done
+}
+
+# Check if pkg dependency is met
+# $* - packages
+zaf_check_deps_pkg() {
+	local p
+	for p in $*; do
+		pkg query -x "Package: %n" $p| grep -q 'Package:' || { echo "Missing package $p" >&2; return 1; }
 	done
 }
 

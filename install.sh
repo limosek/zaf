@@ -127,6 +127,7 @@ zaf_configure_agent() {
 
         zaf_install_dir "$ZAF_AGENT_CONFIGD"
 	echo -n >"$ZAF_AGENT_CONFIGD/zaf_options.conf" || zaf_err "Cannot access $ZAF_AGENT_CONFIGD/zaf_options.conf"
+	! [ -f "$ZAF_AGENT_CONFIG" ] && zaf_install "$ZAF_AGENT_CONFIG"
 	for pair in "$@"; do
 		echo $pair | grep -q '^Z\_' || continue # Skip non Z_ vars
 		option=$(echo $pair|cut -d '=' -f 1|cut -d '_' -f 2)
@@ -239,10 +240,12 @@ reconf)
         ;;
 install)
         zaf_configure auto
-        zaf_configure_agent $ZAF_AGENT_OPTIONS "$@"
-	zaf_set_agent_option "Include" "$ZAF_AGENT_CONFIGD" append
 	rm -rif ${ZAF_TMP_DIR}
 	mkdir -p ${ZAF_TMP_DIR}
+	if zaf_is_root; then
+        	zaf_configure_agent $ZAF_AGENT_OPTIONS "$@"
+		zaf_set_agent_option "Include" "$ZAF_AGENT_CONFIGD" append
+	fi
 	zaf_install_dir ${ZAF_LIB_DIR}
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
 	zaf_install $(zaf_getrest lib/zaf.lib.sh) ${ZAF_LIB_DIR}
