@@ -2,7 +2,7 @@
 
 if [ -z "$ZAF_URL" ]; then
 	# Runing as standalone install.sh. We have to download rest of files first.
-	[ -z "$ZAF_VERSION" ] && ZAF_VERSION=master
+	[ -z "$ZAF_VERSION" ] && ZAF_VERSION=1.0
 	ZAF_URL="https://github.com/limosek/zaf/"
 fi
 
@@ -19,7 +19,7 @@ zaf_fetch_url(){
 # Download tgz and extract to /tmp/zaf-installer
 zaf_download_files() {
 	rm -rf /tmp/zaf-installer
-	zaf_fetch_url $ZAF_URL/archive/$ZAF_VERSION.tar.gz | tar -C /tmp -zx && mv /tmp/zaf-$ZAF_VERSION /tmp/zaf-installer
+	zaf_fetch_url $ZAF_URL/archive/$ZAF_VERSION.tar.gz | tar -f - -C /tmp -zx && mv /tmp/zaf-$ZAF_VERSION /tmp/zaf-installer
 }
 
 if ! [ -f README.md ]; then
