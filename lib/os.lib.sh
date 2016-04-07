@@ -12,6 +12,8 @@ zaf_configure_os_freebsd() {
     ZAF_AGENT_PKG="zabbix3-agent"
     ZAF_AGENT_CONFIG="/usr/local/etc/zabbix3/zabbix_agentd.conf"
     ZAF_AGENT_CONFIGD="/usr/local/etc/zabbix3/zabbix_agentd.conf.d/"
+    ZAF_AGENT_BIN="/usr/local/sbin/zabbix_agentd"
+    ZAF_AGENT_RESTART="service zabbix_agentd restart"
 }
 
 zaf_detect_system() {

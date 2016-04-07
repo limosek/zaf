@@ -114,6 +114,8 @@ zaf_set_agent_option() {
 	if grep -q ^$option\= $ZAF_AGENT_CONFIG; then
 		zaf_dbg "Setting option $option in $ZAF_AGENT_CONFIG."
 		sed -i "s/$option=(.*)/$option=$2/" $ZAF_AGENT_CONFIG
+	else
+		 zaf_move_agent_option "$1" "$2"
 	fi
 }
 
@@ -170,14 +172,14 @@ zaf_configure(){
         if ! zaf_is_root; then
             [ -z "$INSTALL_PREFIX" ] && zaf_err "We are not root. Use INSTALL_PREFIX or become root."
         fi
-	zaf_get_option ZAF_PKG "Packaging system to use" "$ZAF_PKG" "$1"
-	zaf_get_option ZAF_OS "Operating system to use" "$ZAF_OS" "$1"
-	zaf_get_option ZAF_OS_CODENAME "Operating system codename" "$ZAF_OS_CODENAME" "$1"
-	zaf_get_option ZAF_AGENT_PKG "Zabbix agent package" "$ZAF_AGENT_PKG" "$1"
-	zaf_get_option ZAF_AGENT_OPTIONS "Zabbix options to set in cfg" "$ZAF_AGENT_OPTIONS" "$1"
+	zaf_get_option ZAF_PKG "Packaging system to use" "$ZAF_PKG" "$INSTALL_MODE"
+	zaf_get_option ZAF_OS "Operating system to use" "$ZAF_OS" "$INSTALL_MODE"
+	zaf_get_option ZAF_OS_CODENAME "Operating system codename" "$ZAF_OS_CODENAME" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_PKG "Zabbix agent package" "$ZAF_AGENT_PKG" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_OPTIONS "Zabbix options to set in cfg" "$ZAF_AGENT_OPTIONS" "$INSTALL_MODE"
 	if zaf_is_root && [ -n "$ZAF_AGENT_PKG" ]; then
 		if ! zaf_os_specific zaf_check_deps "$ZAF_AGENT_PKG"; then
-			if [ "$1" = "auto" ]; then
+			if [ "$INSTALL_MODE" = "auto" ]; then
 				zaf_os_specific zaf_install_agent
 			fi
 		fi
@@ -187,20 +189,20 @@ zaf_configure(){
 	else
 		ZAF_GIT=0
 	fi
-	zaf_get_option ZAF_GIT "Git is installed" "$ZAF_GIT" "$1"
-	zaf_get_option ZAF_CURL_INSECURE "Insecure curl (accept all certificates)" "1" "$1"
-	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$1"
-	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$1"
-        zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$1"
-	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$1"
-	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_PLUGINS_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$1"
-	zaf_get_option ZAF_PLUGINS_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$1"
-	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$1"
-	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$1"
+	zaf_get_option ZAF_GIT "Git is installed" "$ZAF_GIT" "$INSTALL_MODE"
+	zaf_get_option ZAF_CURL_INSECURE "Insecure curl (accept all certificates)" "1" "$INSTALL_MODE"
+	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$INSTALL_MODE"
+	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$INSTALL_MODE"
+        zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$INSTALL_MODE"
+	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$INSTALL_MODE"
+	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_PLUGINS_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$INSTALL_MODE"
+	zaf_get_option ZAF_PLUGINS_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$INSTALL_MODE"
+	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$INSTALL_MODE"
 	! [ -d "${ZAF_AGENT_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_agentd.d" ] && ZAF_AGENT_CONFIGD="/etc/zabbix/zabbix_agentd.d"
-	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$1"
-	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$1"
-	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$1"
+	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$INSTALL_MODE"
 	
 	if zaf_is_root && ! [ -x $ZAF_AGENT_BIN ]; then
 		zaf_err "Zabbix agent ($ZAF_AGENT_BIN) not installed? Use ZAF_AGENT_BIN env variable to specify location. Exiting."
@@ -281,39 +283,46 @@ ZAF_TMP_DIR="${ZAF_TMP_BASE-/tmp/zaf}-${USER}-$$"
 case $1 in
 interactive)
         shift
-	zaf_configure interactive
+	INSTALL_MODE=interactive
+	zaf_configure "$@"
 	zaf_install_all
 	;;
 auto)
         shift
-	zaf_configure auto
+	INSTALL_MODE=auto
+	zaf_configure "$@"
         zaf_install_all
         ;;
 debug-auto)
         shift;
 	ZAF_DEBUG=4
-        zaf_configure auto
+	INSTALL_MODE=auto
+        zaf_configure "$@"
 	zaf_install_all
         ;;
 debug-interactive)
         shift;
         ZAF_DEBUG=4
-	zaf_configure interactive
+	INSTALL_MODE=interactive
+	zaf_configure "$@"
 	zaf_install_all
         ;;
 debug)
         shift;
         ZAF_DEBUG=4
-	zaf_configure auto
+	INSTALL_MODE=auto
+	zaf_configure "$@"
 	zaf_install_all
         ;;
 reconf)
         shift;
         rm -f $ZAF_CFG_FILE
-	zaf_configure auto
+	INSTALL_MODE=auto
+	zaf_configure "$@"
         ;;
 install)
-        zaf_configure auto
+	INSTALL_MODE=auto
+        zaf_configure "$@"
 	zaf_install_all
 	;;
 *)
