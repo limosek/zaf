@@ -8,6 +8,14 @@ else
 	exit 2
 fi
 
+# Read options as config for ZAF
+for pair in "$@"; do
+    echo $pair | grep -q '^ZAF\_' || continue
+    option=$(echo $pair|cut -d '=' -f 1)
+    value=$(echo $pair|cut -d '=' -f 2-)
+    eval "${option}='$value'"
+done
+
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
 trap "rm -rif ${ZAF_TMP_DIR}" EXIT
@@ -127,6 +135,7 @@ remove)
 	;;
 
 self-upgrade)
+	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-upgrade."
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
 	if ! which curl >/dev/null;
 	then
@@ -143,6 +152,7 @@ self-upgrade)
 	;;
 	
 self-remove)
+	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-remove."
 	. /etc/zaf.conf
 	if [ "$2" = "force" ]; then
 	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \

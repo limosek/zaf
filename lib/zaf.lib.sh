@@ -1,7 +1,7 @@
 
 # Hardcoded variables
-ZAF_VERSION="trunk"
-ZAF_URL="https://raw.githubusercontent.com/limosek/zaf/master/"
+ZAF_VERSION="master"
+ZAF_URL="https://github.com/limosek/zaf"
 
 ############################################ Common routines
 
@@ -39,6 +39,7 @@ zaf_fetch_url() {
 	fi
 	case $scheme in
 	http|https|ftp|file)
+		[ "$scheme" != "file" ] && [ -n "$ZAF_OFFLINE" ] && zaf_err "Cannot download $1 in offline mode!"
 		[ "${ZAF_CURL_INSECURE}" = "1" ] && insecure="-k"
 		zaf_dbg curl $insecure -f -s -L -o - $1
 		curl $insecure -f -s -L -o - "$1"
@@ -131,7 +132,7 @@ zaf_discovery(){
 # Restart zabbix agent
 zaf_restart_agent() {
 	zaf_wrn "Restarting agent (${ZAF_AGENT_RESTART})"
-	${ZAF_AGENT_RESTART} || zaf_err "Cannot restart Zabbix agent (${ZAF_AGENT_RESTART})!"
+	${ZAF_AGENT_RESTART} || zaf_err "Cannot restart Zabbix agent (${ZAF_AGENT_RESTART}). Try $ZAF_AGENT_BIN -f !";
 }
 
 # Check if zaf.version item is populated
@@ -157,6 +158,7 @@ zaf_update_repo() {
 # name (to try from repo)
 zaf_get_plugin_url() {
 	local url
+
 	if echo "$1" | grep -q '/'; then
 		url="$1" 		# plugin with path - from directory
 	else
@@ -166,7 +168,11 @@ zaf_get_plugin_url() {
 			if [ -d "${ZAF_REPO_DIR}/$1" ]; then
 				url="${ZAF_REPO_DIR}/$1"
 			else
-				url="${ZAF_PLUGINS_URL}/$1";
+				if [ -n "${ZAF_PREPACKAGED_DIR}" ] &&  [ -d "${ZAF_PREPACKAGED_DIR}/$1" ]; then
+					url="${ZAF_PREPACKAGED_DIR}/$1"
+				else
+					zaf_err "Plugin $1 not found."
+				fi
 			fi
 		fi
 	fi

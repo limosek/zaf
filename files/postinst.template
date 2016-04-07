@@ -1,0 +1,16 @@
+#!/bin/sh
+
+case $1 in
+configure)
+  if [ -f /usr/lib/zaf/install.sh ] && [ -f /etc/zaf.conf ] && [ -f /usr/lib/zaf/zaf.lib.sh ] && which zaf >/dev/null; then
+	. /etc/zaf.conf
+	. /usr/lib/zaf/zaf.lib.sh
+	. /usr/lib/zaf/os.lib.sh
+	. /usr/lib/zaf/ctrl.lib.sh
+	cd /usr/lib/zaf && /usr/lib/zaf/install.sh reconf
+	zaf reinstall {PLUGINS}
+  fi
+;;
+esac
+
+
