@@ -7,7 +7,7 @@ If you are maintainer of some external check, it is enough to create zaf file in
 
 ## Motivation
 
-Did you install lot of zabbix agents? Do you want to setup them all? Do you want to change some zabbix agent options on lot of system? Do you want to write your own simple check or discovery rule for zabbix and it is nightmare to deploy same script on more zabbix agents? Are you tired searching some system specific agent check and setup them individualy?
+Did you install lot of zabbix agents and try to setup similar common user parameters? Do you want to setup them all? Do you want to change some zabbix agent options on lot of system? Do you want to write your own simple check or discovery rule for zabbix and it is nightmare to deploy same script on more zabbix agents? Are you tired searching some system specific agent check and setup them individualy?
 So zaf is here for you :)
 
 ## Features
@@ -21,6 +21,7 @@ So zaf is here for you :)
 * Zabbix discovery simplification. Creating zabbix item for discovery is not so easy in shell based system and result is not nice. But you can use framework function to do so.
 * OS packaging support (in future).
 * Zabbix agent autoinstallation and autoconfiguration suitable to use in puppet or another tool 
+* OS packaging support
 
 ## Installing Zaf
 You need to be root and you must have curl installed on your system. Depending on your system, github certificates may not be available so you have to use *-k* option for curl (insecure). Default installation type is silent. So there will be no questions and everything will be autodetected. This simple command should be used on most systems:
@@ -56,6 +57,15 @@ curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s 
   Z_ServerActive=zabbix.server.local \
   Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 \
   ZAF_PLUGINS_GITURL="git://gitserver.local"
+```
+
+### Packaged version
+You can make your own deb package with preconfigured option. It is up to you to put it to right repository and install. 
+```
+git clone https://github.com/limosek/zaf.git
+git clone https://github.com/limosek/zaf-plugins.git
+cd zaf && make deb PLUGINS="$PWD/../zaf-plugins/zaf $PWD/../zaf-plugins/fsx" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
+sudo dpkg -i out/zaf.deb
 ```
 
 ## Zaf plugin
@@ -95,7 +105,6 @@ Installer will look into control file, run setup task defined there, fetch binar
 
 ## How it works
 Zaf installer will do most of actions needed to monitor some specific plugin items. Configuration of plugin is very simple and text readable. Anybody can write its own plugin or make its plugin "zafable". It is enough to create *control.zaf" file. For example, look into https://github.com/limosek/zaf-plugins repository. This is default repository for zaf. 
-
 
 ## I want to make my own plugin!
 Great! Look into https://github.com/limosek/zaf-plugins repository, look to control files and try to create your own. It is easy! You can contact me for help.
