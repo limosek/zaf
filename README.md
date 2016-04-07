@@ -46,7 +46,7 @@ git clone https://github.com/limosek/zaf.git; cd zaf; git checkout 1.0
 So you can pass ANY configuration of your zabbix agent directly to installer prefixing it with *Z_*. Please note that options are *Case Sensitive*! 
 Next to this, you can pass ANY zaf config options by *ZAF_* prefix. Yes, we need some more documentation of ZAF options. Please look at least here: https://github.com/limosek/zaf/blob/master/install.sh#L160
 Installer will try to autoguess suitable config options for your system.
-Now everything was tested on Debian and OpenWrt. If somebody is interrested in, you can help and test with some rpm specific functions.
+Now everything was tested on Debian and OpenWrt. If somebody is interrested in, you can help and test with some rpm specific functions. Remember that on some systems, default zabbix agent config is empty so you *need to* enter essential config options as parameters.
 
 ### Example
 Suppose you want to autoinstall agent on clean system. You need only curl installed. Everything else is one-cmd process.
