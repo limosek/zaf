@@ -111,7 +111,7 @@ zaf_set_option(){
 zaf_set_agent_option() {
 	local option="$1"
 	local value="$2"
-	if grep ^$option\= $ZAF_AGENT_CONFIG; then
+	if grep -q ^$option\= $ZAF_AGENT_CONFIG; then
 		zaf_dbg "Setting option $option in $ZAF_AGENT_CONFIG."
 		sed -i "s/$option=(.*)/$option=$2/" $ZAF_AGENT_CONFIG
 	fi
@@ -135,7 +135,7 @@ zaf_add_agent_option() {
 zaf_move_agent_option() {
 	local option="$1"
 	local value="$2"
-	if grep ^$option\= $ZAF_AGENT_CONFIG; then
+	if grep -q ^$option\= $ZAF_AGENT_CONFIG; then
 		zaf_dbg "Moving option $option from $ZAF_AGENT_CONFIG to ."
 		sed -i "s/$option=(.*)/$option=$2/" $ZAF_AGENT_CONFIG
 	fi

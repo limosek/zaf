@@ -71,4 +71,8 @@ deb-changelog:
 
 deb-package:
 	@dpkg-deb -b $(DEBIAN_DIR) $(DEBIAN_PKG)
+	@echo "\nCheck configuration:"
+	@cat $(DEBIAN_DIR)/etc/zaf.conf
+	@echo
+
 	
