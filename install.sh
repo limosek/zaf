@@ -299,7 +299,7 @@ zaf_postconfigure() {
 if [ -f "${ZAF_CFG_FILE}" ]; then
 	. "${ZAF_CFG_FILE}"
 fi
-ZAF_TMP_DIR="/tmp/zaf-installer/"
+ZAF_TMP_DIR="/tmp/zaf-installer-tmp/"
 
 # If debug is on, do not remove tmp dir 
 if [ "$ZAF_DEBUG" -le 3 ]; then
