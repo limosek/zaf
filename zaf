@@ -71,6 +71,7 @@ update)
 	;;
 
 show)
+	shift;
 	shift $(zaf_shift "$@")
 	if [ -z "$1" ]; then
 		zaf_list_plugins | while read plugin; do
@@ -95,6 +96,7 @@ plugins)
 	;;
 
 items)
+	shift
 	shift $(zaf_shift "$@")
 	if [ -z "$1" ]; then
 		zaf_list_items
@@ -104,6 +106,7 @@ items)
 	;;
 
 test)
+	shift
 	shift $(zaf_shift "$@")
 	if echo $1|grep -q '\.'; then
 		zaf_test_item "$1"
@@ -122,6 +125,7 @@ test)
 	done
 	;;
 get)
+	shift
 	shift $(zaf_shift "$@")
 	if echo $1|grep -q '\.'; then
 		zaf_get_item "$1"
@@ -139,6 +143,7 @@ get)
 	done
 	;;
 install)
+	shift
 	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 install plugin [plugin]..."
 	for p in $@; do
@@ -168,6 +173,7 @@ reinstall)
 	;;
 
 remove)
+	shift
 	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 remove plugin [plugin]..."
 	for p in $@; do
@@ -194,6 +200,7 @@ self-upgrade)
 	;;
 	
 self-remove)
+	shift
 	shift $(zaf_shift "$@")
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-remove."
 	. /etc/zaf.conf
