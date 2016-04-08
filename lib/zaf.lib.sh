@@ -143,7 +143,7 @@ zaf_check_agent_config() {
 
 # Update repo
 zaf_update_repo() {
-	[ "$ZAF_GIT" != 1 ] && { zaf_err "Git is not installed. Exiting."; }
+	[ "$ZAF_GIT" != 1 ] && { zaf_err "Git is disabled or is not installed. Exiting."; }
 	if [ -z "${ZAF_PLUGINS_GITURL}" ] || [ -z "${ZAF_REPO_DIR}" ]; then
 		zaf_err "This system is not configured for git repository."
 	else
@@ -312,7 +312,18 @@ zaf_list_items() {
 	done
 }
 
+zaf_get_item() {
+	if which zabbix_get >/dev/null; then
+		zabbix_get -s localhost -k "$1" || zaf_wrn "Cannot reach agent on localhost. Please localhost to Server list."
+		return 11
+	else
+		zaf_wrn "Please install zabbix_get binary to check items over network."
+		return 11
+	fi
+}
+
 zaf_test_item() {
+	[ "$USER" != "zabbix" ] && zaf_wrn "You are not zabbix user. Test will be run with your privileges and sudo access!"
 	$ZAF_AGENT_BIN -t "$1"
 }
 

@@ -39,12 +39,28 @@ or use git version:
 ```
 git clone https://github.com/limosek/zaf.git; cd zaf; git checkout 1.0
 ./install.sh {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Zaf-Options]
- Agent-Options: A_Option=value [...]
+ Agent-Options: Z_Option=value [...]
  Zaf-Options: ZAF_OPT=value [...]
+ To unset Agent-Option use Z_Option=''
 ```
 
 So you can pass ANY configuration of your zabbix agent directly to installer prefixing it with *Z_*. Please note that options are *Case Sensitive*! 
-Next to this, you can pass ANY zaf config options by *ZAF_* prefix. Yes, we need some more documentation of ZAF options. Please look at least here: https://github.com/limosek/zaf/blob/master/install.sh#L160
+Next to this, you can pass ANY zaf config options by *ZAF_* prefix. Interresting ZAF options:
+```
+ # If we want to use GIT and local GIT repository
+ ZAF_GIT='1'# Default
+
+ # Git repository. Can be your local version
+ ZAF_PLUGINS_GITURL='https://github.com/limosek/zaf-plugins.git'
+
+ # Where to install plugins
+ ZAF_PLUGINS_DIR='/usr/lib/zaf/plugins'
+
+ # Plugins can be downloaded from http[s] too
+ ZAF_PLUGINS_URL='https://raw.githubusercontent.com/limosek/zaf-plugins/master/'
+
+```
+
 Installer will try to autoguess suitable config options for your system.
 Now everything was tested on Debian and OpenWrt. If somebody is interrested in, you can help and test with some rpm specific functions. Remember that on some systems, default zabbix agent config is empty so you *need to* enter essential config options as parameters.
 
@@ -62,29 +78,64 @@ curl -k https://raw.githubusercontent.com/limosek/zaf/1.0/install.sh | sh -s aut
 ### Packaged version
 You can make your own deb package with preconfigured option. It is up to you to put it to right APT repository and install. 
 ```
-git clone https://github.com/limosek/zaf.git; cd zaf; git checkout 1.0; cd ..
-git clone https://github.com/limosek/zaf-plugins.git
-cd zaf && make deb PLUGINS="$PWD/../zaf-plugins/zaf $PWD/../zaf-plugins/fsx" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
-sudo dpkg -i out/zaf.deb
+git clone https://github.com/limosek/zaf.git \
+ && cd zaf \
+ && git checkout 1.0 \
+ && git clone https://github.com/limosek/zaf-plugins.git \
+ && make deb PLUGINS="./zaf-plugins/fsx" IPLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
+sudo dpkg -i out/zaf-1.0.deb
+```
+General usage:
+```
+make {deb|ipk|rpm} [PLUGINS="/dir/plg1 [/dir2]...] [IPLUGINS="plg1 [plg2]..."] [ZAF_OPTIONS="ZAF_cfg=val ..."] [AGENT_OPTIONS="Z_Server=host ..."]
+PLUGINS are embedded into package. Has to be local directories accessible during build.
+IPLUGINS will be downloaded and installed after package is installed. Can be name or url accessible after package installation.
 ```
 
 ## Zaf plugin
 Zaf plugin is set of configuration options and binaries which are needed for specific checks. For example, to monitor postfix, we need some cron job which is automaticaly run and next ti this, some external items which has to be configured. Do not mix zaf plugin and zabbix plugin. While zaf plugin is set of scripts or binaries external to zabbix agent, zabbix plugin is internal zabbix lodadable module.
 
+### Control file
+Control file is main part of zaf plugin. It describes how to install plugin and defines all checks. In fact, simple control file can be enough to create zaf plugin because scripts can be embeded within. There are two kind of options: global and per item. Each option can be singleline:
+```
+Plugin: pluginname
+```
+or multiline:
+```
+Description::
+  Zaf plugin for monitoring fail2ban with LLD
+ Credits
+  2014 dron, jiri.slezka@slu.cz
+  2016 limo, lukas.macura@slu.cz
+::
+```
+Items are enclosed like this:
+```
+Item some_item:
+Description::
+     Returns number of currently banned IPs for jail
+::
+Parameters: jail
+Cmd: sudo fail2ban-client status $1 | grep "Currently banned:" | grep -o -E "[0-9]*"
+/Item
+```
+During plugin installation, zaf will check all dependencies, do install binaries and generates apropriate zabbix.conf.d entries.  Look into https://github.com/limosek/zaf-plugins repository for more examples.
+
 ## Zaf utility
 Zaf binary can be installed on any system from openwrt to big system. It has minimal dependencies and is shell based. Is has minimal size (up to 50kb of code). It can be used for installing, removing and testing zaf plugin items. Zaf should be run as root.
 ```
 zaf
-/usr/bin/zaf Version trunk. Please use some of this commands:
-/usr/bin/zaf update			To update repo
-/usr/bin/zaf plugins		To list installed plugins
-/usr/bin/zaf show [plugin]		To show installed plugins or plugin info
-/usr/bin/zaf items [plugin]		To list all suported items [for plugin]
-/usr/bin/zaf test [plugin[.item]]	To test all suported items [for plugin]
-/usr/bin/zaf install plugin		To install plugin
-/usr/bin/zaf remove plugin		To remove plugin
-/usr/bin/zaf self-upgrade		To self-upgrade zaf
-/usr/bin/zaf self-remove		To self-remove zaf and its config
+zaf Version 1.0. Please use some of this commands:
+zaf update			To update repo
+zaf plugins			To list installed plugins
+zaf show [plugin]		To show installed plugins or plugin info
+zaf items [plugin]		To list all suported items [for plugin]
+zaf test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]
+zaf get [plugin[.item]]		To test [all] suported items by zabbix_get [for plugin]
+zaf install plugin		To install plugin
+zaf remove plugin		To remove plugin
+zaf self-upgrade		To self-upgrade zaf
+zaf self-remove			To self-remove zaf and its config
 
 ```
 

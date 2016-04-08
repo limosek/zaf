@@ -18,9 +18,14 @@ done
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
-trap "rm -rif ${ZAF_TMP_DIR}" EXIT
-! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
+
+# If debug is on, do not remove tmp dir 
+if [ "$ZAF_DEBUG" -le 3 ]; then
+	trap "rm -rif ${ZAF_TMP_DIR}" EXIT
+fi
+
+! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 
 if [ -f ./lib/zaf.lib.sh ]; then
 . ./lib/zaf.lib.sh
@@ -93,7 +98,23 @@ test)
 		done
 	done
 	;;
-
+get)
+	if echo $2|grep -q '\.'; then
+		zaf_get_item "$2"
+		exit
+	fi
+	if [ -n "$2" ]; then
+		shift
+		plugins="$@"
+	else
+		plugins="$(zaf_list_plugins)"
+	fi
+	for p in $plugins; do
+		for i in $(zaf_list_plugin_items $p); do 
+			echo $i: $(zaf_get_item $i)
+		done
+	done
+	;;
 install)
 	shift;
 	[ -z "$1" ] && echo "$0 install plugin [plugin]..."
@@ -173,7 +194,8 @@ self-remove)
 	echo "$0 plugins		To list installed plugins"
 	echo "$0 show [plugin]		To show installed plugins or plugin info"
 	echo "$0 items [plugin]		To list all suported items [for plugin]"
-	echo "$0 test [plugin[.item]]	To test all suported items [for plugin]"
+	echo "$0 test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]"
+	echo "$0 get [plugin[.item]]	To test [all] suported items by zabbix_get [for plugin]"
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
 	echo "$0 self-upgrade		To self-upgrade zaf"
