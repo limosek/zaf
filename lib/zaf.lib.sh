@@ -340,4 +340,11 @@ zaf_remove_plugin() {
 	rm -f ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 }
 
+zaf_tolower() {
+	tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'
+}
+
+zaf_toupper() {
+	tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+}
 
