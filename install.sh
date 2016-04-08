@@ -99,9 +99,10 @@ zaf_set_option(){
 	local description
 	if ! grep -q "^$1=" ${ZAF_CFG_FILE}; then
 		echo "$1='$2'" >>${ZAF_CFG_FILE}
-		zaf_dbg "Saving $1 to $2 in ${ZAF_CFG_FILE}" >&2
+		zaf_dbg "Saving $1 to $2 in ${ZAF_CFG_FILE}"
 	else
-		zaf_wrn "Preserving $1 to $2 in ${ZAF_CFG_FILE}" >&2
+		sed -i "s#^$1=\(.*\)#$1='$2'#" ${ZAF_CFG_FILE}
+		zaf_dbg "Changing $1 to $2 in ${ZAF_CFG_FILE}"
 	fi
 }
 
@@ -215,8 +216,8 @@ zaf_configure(){
 	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$INSTALL_MODE"
         zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$INSTALL_MODE"
 	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$INSTALL_MODE"
-	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_PLUGINS_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$INSTALL_MODE"
-	zaf_get_option ZAF_PLUGINS_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$INSTALL_MODE"
+	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_REPO_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$INSTALL_MODE"
+	zaf_get_option ZAF_REPO_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$INSTALL_MODE"
 	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$INSTALL_MODE"
 	! [ -d "${ZAF_AGENT_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_agentd.d" ] && ZAF_AGENT_CONFIGD="/etc/zabbix/zabbix_agentd.d"
@@ -243,15 +244,14 @@ zaf_configure(){
 	zaf_set_option ZAF_LIB_DIR "$ZAF_LIB_DIR"
         zaf_set_option ZAF_BIN_DIR "$ZAF_BIN_DIR"
 	zaf_set_option ZAF_PLUGINS_DIR "$ZAF_PLUGINS_DIR"
-	zaf_set_option ZAF_PLUGINS_URL "$ZAF_PLUGINS_URL"
-	[ "${ZAF_GIT}" = 1 ] && zaf_set_option ZAF_PLUGINS_GITURL "$ZAF_PLUGINS_GITURL"
+	zaf_set_option ZAF_REPO_URL "$ZAF_REPO_URL"
+	[ "${ZAF_GIT}" = 1 ] && zaf_set_option ZAF_REPO_GITURL "$ZAF_REPO_GITURL"
 	zaf_set_option ZAF_REPO_DIR "$ZAF_REPO_DIR"
 	zaf_set_option ZAF_AGENT_CONFIG "$ZAF_AGENT_CONFIG"
 	zaf_set_option ZAF_AGENT_CONFIGD "$ZAF_AGENT_CONFIGD"
 	zaf_set_option ZAF_AGENT_BIN "$ZAF_AGENT_BIN"
 	zaf_set_option ZAF_AGENT_RESTART "$ZAF_AGENT_RESTART"
 	[ -n "$ZAF_PREPACKAGED_DIR" ] && zaf_set_option ZAF_PREPACKAGED_DIR "$ZAF_PREPACKAGED_DIR"
-	ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
 
 	if zaf_is_root; then
         	zaf_configure_agent $ZAF_AGENT_OPTIONS "$@"
@@ -274,7 +274,6 @@ zaf_install_all() {
 		zaf_install_bin $i ${ZAF_BIN_DIR}/
 	done
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
-	zaf_install_dir ${ZAF_TMP_DIR}/p/zaf
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
         zaf_install_dir ${ZAF_BIN_DIR}
 }
@@ -291,7 +290,7 @@ zaf_postconfigure() {
 		exit 1
             fi
 	else
-	    [ "${ZAF_GIT}" = 1 ] && [ -n  "${INSTALL_PREFIX}" ] && git clone "${ZAF_PLUGINS_GITURL}" "${INSTALL_PREFIX}/${ZAF_REPO_DIR}"
+	    [ "${ZAF_GIT}" = 1 ] && [ -n  "${INSTALL_PREFIX}" ] && git clone "${ZAF_REPO_GITURL}" "${INSTALL_PREFIX}/${ZAF_REPO_DIR}"
         fi
 	zaf_wrn "Install done. Use 'zaf' to get started."
 	true
@@ -300,7 +299,7 @@ zaf_postconfigure() {
 if [ -f "${ZAF_CFG_FILE}" ]; then
 	. "${ZAF_CFG_FILE}"
 fi
-ZAF_TMP_DIR="${ZAF_TMP_BASE-/tmp/zaf}-${USER}-$$"
+ZAF_TMP_DIR="/tmp/zaf-installer/"
 
 # If debug is on, do not remove tmp dir 
 if [ "$ZAF_DEBUG" -le 3 ]; then

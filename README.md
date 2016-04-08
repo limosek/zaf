@@ -51,13 +51,13 @@ Next to this, you can pass ANY zaf config options by *ZAF_* prefix. Interresting
  ZAF_GIT='1'# Default
 
  # Git repository. Can be your local version
- ZAF_PLUGINS_GITURL='https://github.com/limosek/zaf-plugins.git'
+ ZAF_REPO_GITURL='https://github.com/limosek/zaf-plugins.git'
 
  # Where to install plugins
  ZAF_PLUGINS_DIR='/usr/lib/zaf/plugins'
 
  # Plugins can be downloaded from http[s] too
- ZAF_PLUGINS_URL='https://raw.githubusercontent.com/limosek/zaf-plugins/master/'
+ ZAF_REPO_URL='https://raw.githubusercontent.com/limosek/zaf-plugins/master/'
 
 ```
 
@@ -72,7 +72,7 @@ curl -k https://raw.githubusercontent.com/limosek/zaf/1.0/install.sh | sh -s aut
   Z_Server=zabbix.server.local \
   Z_ServerActive=zabbix.server.local \
   Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 \
-  ZAF_PLUGINS_GITURL="git://gitserver.local"
+  ZAF_REPO_GITURL="git://gitserver.local"
 ```
 
 ### Packaged version

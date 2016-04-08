@@ -147,7 +147,7 @@ zaf_check_deps_rpm() {
 zaf_check_deps_opkg() {
 	local p
 	for p in $*; do
-		opkg info $p | grep -q 'Package:' || { echo "Missing package $p" >&2; return 1; }
+		opkg info $p | grep -q 'Package:' || { return 1; }
 	done
 }
 
@@ -156,7 +156,7 @@ zaf_check_deps_opkg() {
 zaf_check_deps_pkg() {
 	local p
 	for p in $*; do
-		pkg query -x "Package: %n" $p| grep -q 'Package:' || { echo "Missing package $p" >&2; return 1; }
+		pkg query -x "Package: %n" $p| grep -q 'Package:' || { return 1; }
 	done
 }
 

@@ -144,10 +144,10 @@ zaf_check_agent_config() {
 # Update repo
 zaf_update_repo() {
 	[ "$ZAF_GIT" != 1 ] && { zaf_err "Git is disabled or is not installed. Exiting."; }
-	if [ -z "${ZAF_PLUGINS_GITURL}" ] || [ -z "${ZAF_REPO_DIR}" ]; then
+	if [ -z "${ZAF_REPO_GITURL}" ] || [ -z "${ZAF_REPO_DIR}" ]; then
 		zaf_err "This system is not configured for git repository."
 	else
-		[ ! -d "${ZAF_REPO_DIR}" ] && git clone "${ZAF_PLUGINS_GITURL}" "${ZAF_REPO_DIR}"
+		[ ! -d "${ZAF_REPO_DIR}" ] && git clone "${ZAF_REPO_GITURL}" "${ZAF_REPO_DIR}"
 		(cd ${ZAF_REPO_DIR} && git pull)
 	fi
 }
@@ -171,7 +171,11 @@ zaf_get_plugin_url() {
 				if [ -n "${ZAF_PREPACKAGED_DIR}" ] &&  [ -d "${ZAF_PREPACKAGED_DIR}/$1" ]; then
 					url="${ZAF_PREPACKAGED_DIR}/$1"
 				else
-					zaf_err "Plugin $1 not found."
+					if [ -n "${ZAF_REPO_URL}" ]; then
+						url="${ZAF_REPO_URL}/$1" 
+					else
+						zaf_err "Cannot find plugin $1"
+					fi
 				fi
 			fi
 		fi
@@ -183,6 +187,7 @@ zaf_get_plugin_url() {
 zaf_plugin_info() {
 	local control="$1"
 
+	! [ -f "$control" ] && zaf_err "Control file $control not found."
 	plugin=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Plugin)
 	pdescription=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_moption Description)
 	pmaintainer=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Maintainer)
@@ -209,7 +214,7 @@ zaf_prepare_plugin() {
 	local plugindir
 	local control
 
-	url=$(zaf_get_plugin_url "$1")/control.zaf
+	url=$(zaf_get_plugin_url "$1")/control.zaf || exit $?
 	plugindir="$2"
 	control=${plugindir}/control.zaf
 	zaf_install_dir "$plugindir"
@@ -217,7 +222,7 @@ zaf_prepare_plugin() {
 	if zaf_fetch_url "$url" >"${control}"; then
 		zaf_ctrl_check_deps "${control}"
 	else
-		zaf_err "Cannot fetch or write control file!"
+		zaf_err "prepare_plugin: Cannot fetch or write control file $control from url $url!"
 	fi
 }
 
@@ -231,7 +236,7 @@ zaf_install_plugin() {
 		url=$(zaf_get_plugin_url "$1")
                 plugin=$(zaf_ctrl_get_global_block <"${ZAF_TMP_DIR}/plugin/control.zaf" | zaf_block_get_option Plugin)
 		plugindir="${ZAF_PLUGINS_DIR}"/$plugin
-		if zaf_prepare_plugin "$1" $plugindir; then
+		if [ -n "$plugin" ] && zaf_prepare_plugin "$1" $plugindir; then
 			control=${plugindir}/control.zaf
 			[ "$ZAF_DEBUG" -gt 0 ] && zaf_plugin_info "${control}"
 			zaf_ctrl_check_deps "${control}"
@@ -240,7 +245,7 @@ zaf_install_plugin() {
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 		else
-			zaf_err "Cannot install plugin $plugin to $plugindir!"
+			zaf_err "Cannot install plugin '$plugin' to $plugindir!"
 		fi
         else
             	zaf_err "Cannot prepare plugin $1"
