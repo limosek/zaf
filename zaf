@@ -153,8 +153,8 @@ install)
 	;;
 
 reinstall)
-	shift $(zaf_shift "$@")
 	shift
+	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 reinstall plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
@@ -180,15 +180,16 @@ remove)
 	;;
 
 self-upgrade)
+	shift
 	shift $(zaf_shift "$@")
+	[ -z "$1" ] && auto=auto
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-upgrade."
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
 	if ! which curl >/dev/null;
 	then
 		zaf_err "Curl not found. Cannot continue. Please install it."
 	fi
-	[ -z "$1" ] && auto=auto
-	zaf_fetch_url $ZAF_URL/$ZAF_VERSION/install.sh | exec sh -s "$@"
+	zaf_fetch_url $ZAF_RAW_URL/$ZAF_VERSION/install.sh | exec sh -s $auto "$@"
 	exit
 	;;
 	

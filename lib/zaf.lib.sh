@@ -2,6 +2,7 @@
 # Hardcoded variables
 ZAF_VERSION="1.0"
 ZAF_URL="https://github.com/limosek/zaf"
+ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 
 ############################################ Common routines
 
