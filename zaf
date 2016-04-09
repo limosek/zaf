@@ -69,7 +69,11 @@ update)
 	zaf_wrn "Updating repository ${ZAF_REPO_GITURL}..."
 	zaf_update_repo
 	;;
-
+upgrade)
+	zaf_list_plugins | while read plugin; do
+		ZAF_DEBUG=$ZAF_DEBUG $0 reinstall $plugin || zaf_err "Error upgrading $plugin"
+	done
+	;;
 show)
 	shift;
 	shift $(zaf_shift "$@")
@@ -221,7 +225,8 @@ self-remove)
 	echo "$0 Version ${ZAF_VERSION}. Please use some of this commands:"
 	echo "$0 Cmd [ZAF_OPTION=value] ..."
 	echo "Commands:"
-	echo "$0 update			To update repo" 
+	echo "$0 update			To update repo (not plugins, similar to apt-get update)"
+	echo "$0 upgrade		To upgrade installed plugins from repo" 
 	echo "$0 plugins		To list installed plugins"
 	echo "$0 show [plugin]		To show installed plugins or plugin info"
 	echo "$0 items [plugin]		To list all suported items [for plugin]"
