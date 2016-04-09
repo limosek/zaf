@@ -292,7 +292,7 @@ zaf_postconfigure() {
 	else
 	    [ "${ZAF_GIT}" = 1 ] && [ -n  "${INSTALL_PREFIX}" ] && git clone "${ZAF_REPO_GITURL}" "${INSTALL_PREFIX}/${ZAF_REPO_DIR}"
         fi
-	zaf_wrn "Install done. Use 'zaf' to get started."
+	zaf_wrn "Install done. Use 'zaf' to get started. Do not forget to do 'zaf upgrade' to upgrade plugins too!"
 	true
 }
 
