@@ -272,7 +272,9 @@ zaf_discovery_plugins() {
 	zaf_list_plugins | zaf_discovery '{#PLUGIN}'
 }
 
-zaf_plugin_version() {
+# $1 plugin
+# $2 ctrl_option
+zaf_plugin_option() {
 	local plugindir
 	local cfile
 
@@ -282,10 +284,26 @@ zaf_plugin_version() {
 	if zaf_is_plugin "$1"; then
 		plugindir="${ZAF_PLUGINS_DIR}/$1"
 		cfile="$plugindir/control.zaf"
-		zaf_ctrl_get_global_option $cfile Version
+		zaf_ctrl_get_global_option $cfile $2
 	else
 		zaf_err "Plugin $1 not installed."
 	fi
+}
+
+zaf_plugin_version() {
+	zaf_plugin_option "$1" Version
+}
+zaf_plugin_maintainer() {
+	zaf_plugin_option "$1" Maintainer
+}
+zaf_plugin_url() {
+	zaf_plugin_option "$1" Url
+}
+zaf_plugin_web() {
+	zaf_plugin_option "$1" Web
+}
+zaf_plugin_template_url() {
+	echo $(zaf_plugin_option "$1" Url)/template.xml
 }
 
 zaf_list_plugin_items() {
