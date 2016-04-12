@@ -18,6 +18,8 @@ done
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
+[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}-${USER}c
+
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 export ZAF_DEBUG
 
@@ -68,6 +70,28 @@ case $1 in
 
 check-agent-config)
 	zaf_check_agent_config
+	;;
+
+cache-clean)
+	zaf_cache_clean
+	;;
+
+userparms)
+	for plugin in $(zaf_list_plugins); do
+		plugindir=$ZAF_PLUGINS_DIR/$plugin
+		control=$plugindir/control.zaf
+		zaf_ctrl_generate_cfg "${control}" "${plugin}" \
+			  | zaf_far '{PLUGINDIR}' "${plugindir}"
+	done
+	;;
+
+agent-config)
+	for plugin in $(zaf_list_plugins); do
+		plugindir=$ZAF_PLUGINS_DIR/$plugin
+		control=$plugindir/control.zaf
+		zaf_ctrl_generate_cfg "${control}" "${plugin}" \
+			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+	done
 	;;
 
 update)
@@ -241,17 +265,29 @@ api)
 		zaf_zbxapi_gethostsingroup $gid
 		;;
 	backup-group)
-		gid=$(zaf_zbxapi_gethostgroupid "$3")
+	set -e
+		shift $(zaf_shift)
+		shift; shift
+		gid=$(zaf_zbxapi_gethostgroupid "$1")
+		shift $(zaf_shift)
+		shift
 		hosts=$(zaf_zbxapi_gethostsingroup $gid)
+		dir="."
+		[ -n "$1" ] && dir="$1"
 		zaf_wrn "Will backup this hosts: $hosts"
+		zaf_wrn "Output dir: $dir"
 		for h in $hosts; do
-			hn=$(zaf_zbxapi_gethost $h)
+			zaf_bglimit 5
+			(hn=$(zaf_zbxapi_gethost $h)
 			zaf_wrn "Exporting host $hn($h)..."
-			zaf_zbxapi_backuphost $h >$hn.xml
+			zaf_zbxapi_backuphost $h >$dir/$hn.xml )
 		done
+		wait
 		;;
 	backup-host)
-		hostid=$(zaf_zbxapi_gethostid "$3")
+		shift $(zaf_shift)
+		shift; shift
+		hostid=$(zaf_zbxapi_gethostid "$1")
 		zaf_wrn "Exporting host $3($hostid)..."
 		zaf_zbxapi_backuphost $hostid
 		;;
@@ -283,8 +319,12 @@ api)
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
 	echo "$0 api			To zabbix API functions. See $0 api for more info."
+	echo "$0 userparms		See userparms generated from zaf on stdout"
+	echo "$0 agent-config		Reconfigure zabbix userparms in $ZAF_AGENT_CONFIGD"
+
 	echo "$0 self-upgrade		To self-upgrade zaf"
 	echo "$0 self-remove		To self-remove zaf and its config"
+	echo "$0 cache-clean		To remove all entries from cache"
 	echo
 	;;
 

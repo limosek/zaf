@@ -82,7 +82,25 @@ zaf_ctrl_check_deps() {
 	done
 }
 
-# Install binaries from control
+# Install sudo config from control
+# $1 plugin
+# $2 control
+# $3 plugindir
+zaf_ctrl_sudo() {
+	local pdir
+	local plugin
+
+	if ! which sudo >/dev/null; then
+		zaf_wrn "Sudo needed bud not installed?"
+	fi
+	pdir="$3"
+	plugin=$1
+	(echo -n "zabbix ALL=NOPASSWD: "
+	zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}";
+	echo ) >$ZAF_SUDOERSD/zaf_$plugin
+}
+
+# Install sudo options from control
 # $1 pluginurl
 # $2 control
 # $3 plugindir
@@ -104,6 +122,7 @@ zaf_ctrl_install() {
 	[ -n "$cmd" ] && $cmd
 }
 
+
 # Generates zabbix cfg from control file
 # $1 control
 # $2 pluginname
@@ -113,6 +132,7 @@ zaf_ctrl_generate_cfg() {
 	local iscript
 	local ikey
 	local lock
+	local cache
 
 	items=$(zaf_ctrl_get_items <"$1")
 	for i in $items; do
@@ -133,21 +153,25 @@ zaf_ctrl_generate_cfg() {
 	    if [ -n "$lock" ]; then
 		lock="${ZAF_LIB_DIR}/zaflock $lock "
 	    fi
+	    cache=$(zaf_ctrl_get_item_option $1 $i "Cache")
+	    if [ -n "$cache" ]; then
+		cache="_cache '$cache' "
+	    fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
             if [ -n "$cmd" ]; then
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd";
+                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock$cmd";
                 continue
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Function")
             if [ -n "$cmd" ]; then
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd";
+                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock$cmd";
                 continue;
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
             if [ -n "$cmd" ]; then
                 zaf_ctrl_get_item_option $1 $i "Script" >${ZAF_TMP_DIR}/${iscript}.sh;
                 zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args";
+                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args";
                 continue;
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"

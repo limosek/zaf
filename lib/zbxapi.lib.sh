@@ -3,10 +3,14 @@
 zaf_zbxapi_do() {
 	local result
 	if ! zaf_fromcache "$1"; then
-		zaf_dbg "Zabbix API: $1"
+		zaf_trc "Zabbix API: $1"
 		result=$(curl -s -f -L -X POST -H 'Content-Type: application/json-rpc' -d "$1" "$ZAF_ZBXAPI_URL")
-		zaf_tocache "$1" "$result" 60
-		echo $result
+		if [ $? = 0 ] && echo $result | grep -q '"result":'; then
+			zaf_tocache "$1" "$result" 60		
+			echo $result
+		else
+			zaf_err "Error processing API request. ($?,$result)"
+		fi
 	fi
 }
 
@@ -55,7 +59,6 @@ zaf_zbxapi_login(){
     ZAF_ZBXAPI_URL=$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 1)//$ZAF_ZBXAPI_USER:$ZAF_ZBXAPI_PASS@$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 3-)
  fi
  result=$(zaf_zbxapi_do "$authstr")
- echo $result | grep -vq '"result":"' && zaf_err "Cannot login to API"
  ZAF_ZBXAPI_AUTH=$(echo $result |zaf_zbxapi_getresult| zaf_zbxapi_getstring)
  zaf_dbg "Logged into zabbix API ($ZAF_ZBXAPI_AUTH)"
 }

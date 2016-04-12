@@ -73,6 +73,27 @@ zaf_far(){
    eval $sedcmd
 }
 
+# Limit concurrent processes or continue
+zaf_bglimit(){
+    local maxbg
+    local maxnumber
+    local cnumber
+    if [ $# -eq 0 ] ; then
+            maxbg=5
+    else
+	    maxbg=$1
+    fi
+    maxnumber=$((0 + ${1:-0}))
+    while true; do
+            cnumber=$(jobs | wc -l)
+            if [ $cnumber -lt $maxnumber ]; then
+                    break
+            fi
+	    zaf_dbg "Limiting next job due to $maxbg limit of bg jobs"
+            sleep 1
+    done
+}
+
 # Initialises discovery function
 zaf_discovery_begin(){
 cat <<EOF
@@ -251,6 +272,7 @@ zaf_install_plugin() {
 			[ "$ZAF_DEBUG" -gt 1 ] && zaf_plugin_info "${control}"
 			zaf_ctrl_check_deps "${control}"
 			zaf_ctrl_install "$url" "${control}" "${plugindir}"
+			zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_generate_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
