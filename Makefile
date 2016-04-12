@@ -5,6 +5,9 @@ ZAF_EXPORT_OPTS=$(foreach o,$(ZAF_OPTIONS),$(shell echo $(o)|cut -d '=' -f 1))
 DEBIAN_DIR=tmp/deb
 DEBIAN_CTRL=$(DEBIAN_DIR)/DEBIAN
 DEBIAN_PKG=$(shell . lib/zaf.lib.sh; echo out/zaf-$$ZAF_VERSION.deb)
+ifeq ($(ZAF_DEBUG),)
+ ZAF_DEBUG=0
+endif
 
 ifeq ($(ZAF_OPTIONS),)
  ZAF_OPTIONS = ZAF_GIT=0
@@ -44,7 +47,8 @@ deb-control:
 	for p in $(PLUGINS); do \
 	  	DEPENDS="$$DEPENDS,$$(zaf_ctrl_get_global_option $$p/control.zaf Depends-dpkg | tr ' ' ',')"; \
 	done; \
-	zaf_far '{ZAF_VERSION}' "$$ZAF_VERSION" <files/control.template | zaf_far '{ZAF_DEPENDS}' "$$DEPENDS" >$(DEBIAN_CTRL)/control
+	[ "$$ZAF_GITBRANCH" = "master" ] && master=master; \
+	zaf_far '{ZAF_VERSION}' "$${ZAF_VERSION}$$master" <files/control.template | zaf_far '{ZAF_DEPENDS}' "$$DEPENDS" >$(DEBIAN_CTRL)/control
 
 deb-scripts:
 	@. lib/zaf.lib.sh; \
@@ -58,7 +62,7 @@ deb-scripts:
 
 deb-cp:
 	@mkdir -p $(DEBIAN_DIR)
-	@set -e; INSTALL_PREFIX=$(DEBIAN_DIR) ZAF_DEBUG=0 ./install.sh auto $(ZAF_OPTIONS) $(AGENT_OPTIONS)
+	@set -e; INSTALL_PREFIX=$(DEBIAN_DIR) ZAF_DEBUG=$(ZAF_DEBUG) ./install.sh auto $(ZAF_OPTIONS) $(AGENT_OPTIONS)
 	@. lib/zaf.lib.sh; \
 	. lib/ctrl.lib.sh; \
 	for p in $(PLUGINS); do \

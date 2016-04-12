@@ -1,6 +1,7 @@
 
 # Hardcoded variables
-ZAF_VERSION="master"
+ZAF_VERSION="1.1"
+ZAF_GITBRANCH="master"
 ZAF_URL="https://github.com/limosek/zaf"
 ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 
@@ -8,6 +9,9 @@ ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 
 zaf_msg() {
 	echo $@
+}
+zaf_trc() {
+	[ "$ZAF_DEBUG" -ge "3" ] && logger -s -t zaf -- $@
 }
 zaf_dbg() {
 	[ "$ZAF_DEBUG" -ge "2" ] && logger -s -t zaf -- $@
@@ -32,7 +36,11 @@ zaf_fetch_url() {
 	local scheme
 	local uri
 	local insecure
+	local out
 	
+	if zaf_fromcache "$1"; then
+		return
+	fi
 	scheme=$(echo $1|cut -d ':' -f 1)
 	uri=$(echo $1|cut -d '/' -f 3-)
 	if [ "$1" = "$scheme" ]; then
@@ -43,7 +51,7 @@ zaf_fetch_url() {
 		[ "$scheme" != "file" ] && [ -n "$ZAF_OFFLINE" ] && zaf_err "Cannot download $1 in offline mode!"
 		[ "${ZAF_CURL_INSECURE}" = "1" ] && insecure="-k"
 		zaf_dbg curl $insecure -f -s -L -o - $1
-		curl $insecure -f -s -L -o - "$1"
+		curl $insecure -f -s -L -o - "$1" | zaf_tocache_stdin "$1" 120
 	;;
 	esac 
 }
@@ -238,8 +246,9 @@ zaf_install_plugin() {
                 plugin=$(zaf_ctrl_get_global_block <"${ZAF_TMP_DIR}/plugin/control.zaf" | zaf_block_get_option Plugin)
 		plugindir="${ZAF_PLUGINS_DIR}"/$plugin
 		if [ -n "$plugin" ] && zaf_prepare_plugin "$1" $plugindir; then
+			zaf_wrn "Installing plugin $plugin from $url to $plugindir"
 			control=${plugindir}/control.zaf
-			[ "$ZAF_DEBUG" -gt 0 ] && zaf_plugin_info "${control}"
+			[ "$ZAF_DEBUG" -gt 1 ] && zaf_plugin_info "${control}"
 			zaf_ctrl_check_deps "${control}"
 			zaf_ctrl_install "$url" "${control}" "${plugindir}"
 			zaf_ctrl_generate_cfg "${control}" "${plugin}" \

@@ -27,16 +27,21 @@ if [ "$ZAF_DEBUG" -le 3 ]; then
 fi
 
 ! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
+! [ -d "${ZAF_CACHE_DIR}" ] && mkdir "${ZAF_CACHE_DIR}"
 
 if [ -f ./lib/zaf.lib.sh ]; then
 . ./lib/zaf.lib.sh
 . ./lib/os.lib.sh
 . ./lib/ctrl.lib.sh
+. ./lib/cache.lib.sh
+. ./lib/zbxapi.lib.sh
 [ -f ./lib/zaf.${ZAF_OS}.sh ] && . ./lib/zaf.${ZAF_OS}.sh
 else 
 . ${ZAF_LIB_DIR}/zaf.lib.sh
 . ${ZAF_LIB_DIR}/os.lib.sh
 . ${ZAF_LIB_DIR}/ctrl.lib.sh
+. ${ZAF_LIB_DIR}/cache.lib.sh
+. ${ZAF_LIB_DIR}/zbxapi.lib.sh
 [ -f ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh ] && . ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh
 fi
 
@@ -70,9 +75,7 @@ update)
 	zaf_update_repo
 	;;
 upgrade)
-	zaf_list_plugins | while read plugin; do
-		ZAF_DEBUG=$ZAF_DEBUG $0 reinstall $plugin || zaf_err "Error upgrading $plugin"
-	done
+	ZAF_DEBUG=$ZAF_DEBUG $0 reinstall $(zaf_list_plugins)
 	;;
 show)
 	shift;
@@ -219,7 +222,52 @@ self-remove)
 	  echo 
 	  echo "To continue, please do $0 self-remove force"
 	fi
-      ;;
+      	;;
+
+api)
+	zaf_zbxapi_login
+	case $2 in
+	hostid)
+		zaf_zbxapi_gethostid "$3"
+		;;
+	host)
+		zaf_zbxapi_gethost "$3"
+		;;	
+	hostgroupid)
+		zaf_zbxapi_gethostgroupid "$3"
+		;;	
+	hosts)
+		gid=$(zaf_zbxapi_gethostgroupid "$3")
+		zaf_zbxapi_gethostsingroup $gid
+		;;
+	backup-group)
+		gid=$(zaf_zbxapi_gethostgroupid "$3")
+		hosts=$(zaf_zbxapi_gethostsingroup $gid)
+		zaf_wrn "Will backup this hosts: $hosts"
+		for h in $hosts; do
+			hn=$(zaf_zbxapi_gethost $h)
+			zaf_wrn "Exporting host $hn($h)..."
+			zaf_zbxapi_backuphost $h >$hn.xml
+		done
+		;;
+	backup-host)
+		hostid=$(zaf_zbxapi_gethostid "$3")
+		zaf_wrn "Exporting host $3($hostid)..."
+		zaf_zbxapi_backuphost $hostid
+		;;
+	*)
+		echo "$0 api command [parameters]"
+		echo "hostid 'host'			Get hostid from hostname"
+		echo "host 'hostid'			Get hostname from hostid"
+		echo "hostgroupid 'hostgroup'		Get hostgroup id from hostgroup"
+		echo "hosts 'hostgroup'			Get hosts in group"
+		echo "backup-group 'hostgroup' [dir]	Backup all hosts in group (get their config from zabbix and save to dir/hostname.xml)" 
+		echo "backup-host 'host'		Backup host (get config from zabbix to stdout)"
+		echo
+		exit
+		;;
+	esac
+	;;
 
 *)
 	echo "$0 Version ${ZAF_VERSION}. Please use some of this commands:"
@@ -234,6 +282,7 @@ self-remove)
 	echo "$0 get [plugin[.item]]	To test [all] suported items by zabbix_get [for plugin]"
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
+	echo "$0 api			To zabbix API functions. See $0 api for more info."
 	echo "$0 self-upgrade		To self-upgrade zaf"
 	echo "$0 self-remove		To self-remove zaf and its config"
 	echo

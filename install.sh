@@ -3,7 +3,7 @@
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 if [ -z "$ZAF_URL" ]; then
 	# Runing as standalone install.sh. We have to download rest of files first.
-	[ -z "$ZAF_VERSION" ] && ZAF_VERSION=1.0
+	[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=master
 	ZAF_URL="https://github.com/limosek/zaf/"
 fi
 
@@ -20,7 +20,7 @@ zaf_fetch_url(){
 # Download tgz and extract to /tmp/zaf-installer
 zaf_download_files() {
 	rm -rf /tmp/zaf-installer
-	zaf_fetch_url $ZAF_URL/archive/$ZAF_VERSION.tar.gz | tar -f - -C /tmp -zx && mv /tmp/zaf-$ZAF_VERSION /tmp/zaf-installer
+	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C /tmp -zx && mv /tmp/zaf-$ZAF_VERSION /tmp/zaf-installer
 }
 
 if ! [ -f README.md ]; then
@@ -224,7 +224,12 @@ zaf_configure(){
 	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$INSTALL_MODE"
-	
+	zaf_get_option ZAF_CACHE_DIR "Cache directory" "${ZAF_TMP_BASE}c/" "$INSTALL_MODE"
+	zaf_get_option ZAF_ZBXAPI_URL "Zabbix API url" "http://localhost/zabbix/api_jsonrpc.php" "$INSTALL_MODE"
+	zaf_get_option ZAF_ZBXAPI_USER "Zabbix API user" "zaf" "$INSTALL_MODE"
+	zaf_get_option ZAF_ZBXAPI_PASS "Zabbix API password" "" "$INSTALL_MODE"
+	zaf_get_option ZAF_ZBXAPI_AUTHTYPE "Zabbix API authentication type" "internal" "$INSTALL_MODE"
+
 	if zaf_is_root && ! [ -x $ZAF_AGENT_BIN ]; then
 		zaf_err "Zabbix agent ($ZAF_AGENT_BIN) not installed? Use ZAF_AGENT_BIN env variable to specify location. Exiting."
 	fi
@@ -251,6 +256,11 @@ zaf_configure(){
 	zaf_set_option ZAF_AGENT_CONFIGD "$ZAF_AGENT_CONFIGD"
 	zaf_set_option ZAF_AGENT_BIN "$ZAF_AGENT_BIN"
 	zaf_set_option ZAF_AGENT_RESTART "$ZAF_AGENT_RESTART"
+	zaf_set_option ZAF_CACHE_DIR "$ZAF_CACHE_DIR"
+	zaf_set_option ZAF_ZBXAPI_URL "$ZAF_ZBXAPI_URL"
+	zaf_set_option ZAF_ZBXAPI_USER "$ZAF_ZBXAPI_USER"
+	zaf_set_option ZAF_ZBXAPI_PASS "$ZAF_ZBXAPI_PASS"
+	zaf_set_option ZAF_ZBXAPI_AUTHTYPE "$ZAF_ZBXAPI_AUTHTYPE"
 	[ -n "$ZAF_PREPACKAGED_DIR" ] && zaf_set_option ZAF_PREPACKAGED_DIR "$ZAF_PREPACKAGED_DIR"
 
 	if zaf_is_root; then
@@ -263,15 +273,15 @@ zaf_install_all() {
 	rm -rif ${ZAF_TMP_DIR}
 	mkdir -p ${ZAF_TMP_DIR}
 	zaf_install_dir ${ZAF_LIB_DIR}
-	for i in lib/zaf.lib.sh lib/os.lib.sh lib/ctrl.lib.sh README.md; do
-		zaf_install $i ${ZAF_LIB_DIR}/
+	for i in lib/zaf.lib.sh lib/os.lib.sh lib/ctrl.lib.sh lib/cache.lib.sh lib/zbxapi.lib.sh README.md; do
+		zaf_install $i ${ZAF_LIB_DIR}/ || zaf_err "Error installing $i"
 	done
 	for i in lib/zaflock lib/preload.sh; do
-		zaf_install_bin $i ${ZAF_LIB_DIR}/
+		zaf_install_bin $i ${ZAF_LIB_DIR}/ || zaf_err "Error installing $i"
 	done
 	zaf_install_dir ${ZAF_BIN_DIR}
 	for i in zaf; do
-		zaf_install_bin $i ${ZAF_BIN_DIR}/
+		zaf_install_bin $i ${ZAF_BIN_DIR}/ || zaf_err "Error installing $i"
 	done
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
