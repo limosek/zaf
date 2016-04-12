@@ -25,6 +25,7 @@ zaf_tocache(){
 	local lifetime
 	key=$(zaf_cachekey $1)
 	echo "$2" >$ZAF_CACHE_DIR/$key
+	echo "$1" >$ZAF_CACHE_DIR/$key.key
 	touch -m -d "$3 seconds" $ZAF_CACHE_DIR/$key.tme
 	zaf_trc "Cache: Saving entry $1($key)"
 }
@@ -38,6 +39,7 @@ zaf_tocache_stdin(){
 
 	key=$(zaf_cachekey $1)
 	cat >$ZAF_CACHE_DIR/$key
+	echo "$1" >$ZAF_CACHE_DIR/$key.key
 	touch -m -d "$3 seconds" $ZAF_CACHE_DIR/$key.tme
 	zaf_trc "Cache: Saving entry $1($key)"
 	cat $ZAF_CACHE_DIR/$key

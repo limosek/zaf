@@ -95,9 +95,24 @@ zaf_ctrl_sudo() {
 	fi
 	pdir="$3"
 	plugin=$1
-	(echo -n "zabbix ALL=NOPASSWD: "
+	zaf_dbg "Installing sudoers entry $ZAF_SUDOERSD/zaf_$plugin"
+	(echo -n "zabbix ALL=NOPASSWD:SETENV: "
 	zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}";
 	echo ) >$ZAF_SUDOERSD/zaf_$plugin
+}
+
+# Install crontab config from control
+# $1 plugin
+# $2 control
+# $3 plugindir
+zaf_ctrl_cron() {
+	local pdir
+	local plugin
+
+	pdir="$3"
+	plugin=$1
+	zaf_dbg "Installing cron entry $ZAF_CROND/zaf_$plugin"
+	zaf_ctrl_get_global_option $2 "Cron" | zaf_far '{PLUGINDIR}' "${plugindir}" >$ZAF_CROND/zaf_$plugin
 }
 
 # Install sudo options from control

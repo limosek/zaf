@@ -382,6 +382,11 @@ zaf_test_item() {
 	$ZAF_AGENT_BIN -t "$1"
 }
 
+zaf_precache_item() {
+	cmd=$(grep "^UserParameter=$item" $ZAF_AGENT_CONFIGD/zaf*.conf  | cut -d ',' -f 2-)
+	eval $cmd
+}
+
 zaf_remove_plugin() {
 	! [ -d ${ZAF_PLUGINS_DIR}/$1 ] && { zaf_err "Plugin $1 not installed!"; }
 	zaf_wrn "Removing plugin $1"

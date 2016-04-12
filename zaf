@@ -18,7 +18,7 @@ done
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
-[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}-${USER}c
+[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}c
 
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 export ZAF_DEBUG
@@ -29,7 +29,9 @@ if [ "$ZAF_DEBUG" -le 3 ]; then
 fi
 
 ! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
-! [ -d "${ZAF_CACHE_DIR}" ] && mkdir "${ZAF_CACHE_DIR}"
+if ! [ -d "${ZAF_CACHE_DIR}" ]; then
+	mkdir "${ZAF_CACHE_DIR}"
+fi
 
 if [ -f ./lib/zaf.lib.sh ]; then
 . ./lib/zaf.lib.sh
@@ -45,6 +47,11 @@ else
 . ${ZAF_LIB_DIR}/cache.lib.sh
 . ${ZAF_LIB_DIR}/zbxapi.lib.sh
 [ -f ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh ] && . ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh
+fi
+
+if zaf_is_root; then
+	chgrp zabbix "${ZAF_CACHE_DIR}"
+	chmod g+w "${ZAF_CACHE_DIR}"
 fi
 
 zaf_shift(){
@@ -173,6 +180,17 @@ get)
 		done
 	done
 	;;
+
+precache)
+	shift
+	shift $(zaf_shift "$@")
+	for i in $*; do
+		item=$(echo $i | cut -d '[' -f 1)
+		params=$(echo $i | cut -d '[' -f 2 | cut -d ']' -f 1 | tr ',' ' ')
+		zaf_precache_item $params
+	done
+	;;
+
 install)
 	shift
 	shift $(zaf_shift "$@")

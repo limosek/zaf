@@ -4,9 +4,9 @@
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
-[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}-${USER}c
+[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}c
 
-#trap "rm -rif ${ZAF_TMP_DIR}" EXIT
+trap "rm -rif ${ZAF_TMP_DIR}" EXIT
 ! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 ! [ -d "${ZAF_CACHE_DIR}" ] && mkdir "${ZAF_CACHE_DIR}"
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
