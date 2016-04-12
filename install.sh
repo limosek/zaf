@@ -1,8 +1,9 @@
 #!/bin/sh
 
+[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 if [ -z "$ZAF_URL" ]; then
 	# Runing as standalone install.sh. We have to download rest of files first.
-	[ -z "$ZAF_VERSION" ] && ZAF_VERSION=master
+	[ -z "$ZAF_VERSION" ] && ZAF_VERSION=1.0
 	ZAF_URL="https://github.com/limosek/zaf/"
 fi
 
@@ -19,7 +20,7 @@ zaf_fetch_url(){
 # Download tgz and extract to /tmp/zaf-installer
 zaf_download_files() {
 	rm -rf /tmp/zaf-installer
-	zaf_fetch_url $ZAF_URL/archive/$ZAF_VERSION.tar.gz | tar -C /tmp -zx && mv /tmp/zaf-$ZAF_VERSION /tmp/zaf-installer
+	zaf_fetch_url $ZAF_URL/archive/$ZAF_VERSION.tar.gz | tar -f - -C /tmp -zx && mv /tmp/zaf-$ZAF_VERSION /tmp/zaf-installer
 }
 
 if ! [ -f README.md ]; then
@@ -52,7 +53,6 @@ done
 
 [ -z "$ZAF_CFG_FILE" ] && ZAF_CFG_FILE=$INSTALL_PREFIX/etc/zaf.conf
 [ -n "$C_ZAF_DEBUG" ] && ZAF_DEBUG=$C_ZAF_DEBUG
-[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 
 # Read option. If it is already set in zaf.conf, it is skipped. If env variable is set, it is used instead of default
 # It sets global variable name on result.
@@ -99,9 +99,10 @@ zaf_set_option(){
 	local description
 	if ! grep -q "^$1=" ${ZAF_CFG_FILE}; then
 		echo "$1='$2'" >>${ZAF_CFG_FILE}
-		zaf_dbg "Saving $1 to $2 in ${ZAF_CFG_FILE}" >&2
+		zaf_dbg "Saving $1 to $2 in ${ZAF_CFG_FILE}"
 	else
-		zaf_wrn "Preserving $1 to $2 in ${ZAF_CFG_FILE}" >&2
+		sed -i "s#^$1=\(.*\)#$1='$2'#" ${ZAF_CFG_FILE}
+		zaf_dbg "Changing $1 to $2 in ${ZAF_CFG_FILE}"
 	fi
 }
 
@@ -113,7 +114,20 @@ zaf_set_agent_option() {
 	local value="$2"
 	if grep -q ^$option\= $ZAF_AGENT_CONFIG; then
 		zaf_dbg "Setting option $option in $ZAF_AGENT_CONFIG."
-		sed -i "s/$option=(.*)/$option=$2/" $ZAF_AGENT_CONFIG
+		sed -i "s/$option=\(.*\)/$option=$2/" $ZAF_AGENT_CONFIG
+	else
+		 zaf_move_agent_option "$1" "$2"
+	fi
+}
+
+# Unset config option in zabbix agent config file
+# $1 option
+zaf_unset_agent_option() {
+	local option="$1"
+	local value="$2"
+	if grep -q ^$option\= $ZAF_AGENT_CONFIG; then
+		zaf_dbg "Unsetting option $option in $ZAF_AGENT_CONFIG."
+		sed -i "s/$option=\(.*\)/#$option=$2/" $ZAF_AGENT_CONFIG
 	fi
 }
 
@@ -157,27 +171,36 @@ zaf_configure_agent() {
 		echo $pair | grep -q '^Z\_' || continue # Skip non Z_ vars
 		option=$(echo $pair|cut -d '=' -f 1|cut -d '_' -f 2)
 		value=$(echo $pair|cut -d '=' -f 2-)
-		zaf_set_agent_option "$option" "$value"
+		if [ -n "$value" ]; then
+			zaf_set_agent_option "$option" "$value"
+		else
+			zaf_unset_agent_option "$option"
+		fi
 		options="$options Z_$option='$value'"
 	done
 	zaf_set_option ZAF_AGENT_OPTIONS "${options}"
 }
 
-zaf_configure(){
-
+zaf_preconfigure(){
 	zaf_detect_system 
         zaf_os_specific zaf_configure_os
-        if ! zaf_is_root; then
+	if ! zaf_is_root; then
             [ -z "$INSTALL_PREFIX" ] && zaf_err "We are not root. Use INSTALL_PREFIX or become root."
+	else
+		[ "$1" != "reconf" ] && zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot install."
         fi
-	zaf_get_option ZAF_PKG "Packaging system to use" "$ZAF_PKG" "$1"
-	zaf_get_option ZAF_OS "Operating system to use" "$ZAF_OS" "$1"
-	zaf_get_option ZAF_OS_CODENAME "Operating system codename" "$ZAF_OS_CODENAME" "$1"
-	zaf_get_option ZAF_AGENT_PKG "Zabbix agent package" "$ZAF_AGENT_PKG" "$1"
-	zaf_get_option ZAF_AGENT_OPTIONS "Zabbix options to set in cfg" "$ZAF_AGENT_OPTIONS" "$1"
+}
+
+zaf_configure(){
+
+	zaf_get_option ZAF_PKG "Packaging system to use" "$ZAF_PKG" "$INSTALL_MODE"
+	zaf_get_option ZAF_OS "Operating system to use" "$ZAF_OS" "$INSTALL_MODE"
+	zaf_get_option ZAF_OS_CODENAME "Operating system codename" "$ZAF_OS_CODENAME" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_PKG "Zabbix agent package" "$ZAF_AGENT_PKG" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_OPTIONS "Zabbix options to set in cfg" "$ZAF_AGENT_OPTIONS" "$INSTALL_MODE"
 	if zaf_is_root && [ -n "$ZAF_AGENT_PKG" ]; then
 		if ! zaf_os_specific zaf_check_deps "$ZAF_AGENT_PKG"; then
-			if [ "$1" = "auto" ]; then
+			if [ "$INSTALL_MODE" = "auto" ]; then
 				zaf_os_specific zaf_install_agent
 			fi
 		fi
@@ -187,20 +210,20 @@ zaf_configure(){
 	else
 		ZAF_GIT=0
 	fi
-	zaf_get_option ZAF_GIT "Git is installed" "$ZAF_GIT" "$1"
-	zaf_get_option ZAF_CURL_INSECURE "Insecure curl (accept all certificates)" "1" "$1"
-	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$1"
-	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$1"
-        zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$1"
-	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$1"
-	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_PLUGINS_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$1"
-	zaf_get_option ZAF_PLUGINS_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$1"
-	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$1"
-	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$1"
+	zaf_get_option ZAF_GIT "Git is installed" "$ZAF_GIT" "$INSTALL_MODE"
+	zaf_get_option ZAF_CURL_INSECURE "Insecure curl (accept all certificates)" "1" "$INSTALL_MODE"
+	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$INSTALL_MODE"
+	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$INSTALL_MODE"
+        zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$INSTALL_MODE"
+	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$INSTALL_MODE"
+	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_REPO_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$INSTALL_MODE"
+	zaf_get_option ZAF_REPO_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$INSTALL_MODE"
+	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$INSTALL_MODE"
 	! [ -d "${ZAF_AGENT_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_agentd.d" ] && ZAF_AGENT_CONFIGD="/etc/zabbix/zabbix_agentd.d"
-	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$1"
-	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$1"
-	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$1"
+	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$INSTALL_MODE"
+	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$INSTALL_MODE"
 	
 	if zaf_is_root && ! [ -x $ZAF_AGENT_BIN ]; then
 		zaf_err "Zabbix agent ($ZAF_AGENT_BIN) not installed? Use ZAF_AGENT_BIN env variable to specify location. Exiting."
@@ -221,15 +244,14 @@ zaf_configure(){
 	zaf_set_option ZAF_LIB_DIR "$ZAF_LIB_DIR"
         zaf_set_option ZAF_BIN_DIR "$ZAF_BIN_DIR"
 	zaf_set_option ZAF_PLUGINS_DIR "$ZAF_PLUGINS_DIR"
-	zaf_set_option ZAF_PLUGINS_URL "$ZAF_PLUGINS_URL"
-	[ "${ZAF_GIT}" = 1 ] && zaf_set_option ZAF_PLUGINS_GITURL "$ZAF_PLUGINS_GITURL"
+	zaf_set_option ZAF_REPO_URL "$ZAF_REPO_URL"
+	[ "${ZAF_GIT}" = 1 ] && zaf_set_option ZAF_REPO_GITURL "$ZAF_REPO_GITURL"
 	zaf_set_option ZAF_REPO_DIR "$ZAF_REPO_DIR"
 	zaf_set_option ZAF_AGENT_CONFIG "$ZAF_AGENT_CONFIG"
 	zaf_set_option ZAF_AGENT_CONFIGD "$ZAF_AGENT_CONFIGD"
 	zaf_set_option ZAF_AGENT_BIN "$ZAF_AGENT_BIN"
 	zaf_set_option ZAF_AGENT_RESTART "$ZAF_AGENT_RESTART"
 	[ -n "$ZAF_PREPACKAGED_DIR" ] && zaf_set_option ZAF_PREPACKAGED_DIR "$ZAF_PREPACKAGED_DIR"
-	ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}-$$"
 
 	if zaf_is_root; then
         	zaf_configure_agent $ZAF_AGENT_OPTIONS "$@"
@@ -252,11 +274,12 @@ zaf_install_all() {
 		zaf_install_bin $i ${ZAF_BIN_DIR}/
 	done
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
-	zaf_install_dir ${ZAF_TMP_DIR}/p/zaf
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
         zaf_install_dir ${ZAF_BIN_DIR}
-        export INSTALL_PREFIX ZAF_CFG_FILE ZAF_DEBUG
-        if zaf_is_root; then
+}
+
+zaf_postconfigure() {
+	if zaf_is_root; then
 	    [ "${ZAF_GIT}" = 1 ] && ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf update
             ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf reinstall zaf || zaf_err "Error installing zaf plugin."
             if zaf_is_root && ! zaf_test_item zaf.framework_version; then
@@ -267,62 +290,91 @@ zaf_install_all() {
 		exit 1
             fi
 	else
-	    [ "${ZAF_GIT}" = 1 ] && [ -n  "${INSTALL_PREFIX}" ] && git clone "${ZAF_PLUGINS_GITURL}" "${INSTALL_PREFIX}/${ZAF_REPO_DIR}"
+	    [ "${ZAF_GIT}" = 1 ] && [ -n  "${INSTALL_PREFIX}" ] && git clone "${ZAF_REPO_GITURL}" "${INSTALL_PREFIX}/${ZAF_REPO_DIR}"
         fi
-	rm -rif ${ZAF_TMP_DIR}
-	echo "Install OK. Use 'zaf' without parameters to continue."
+	zaf_wrn "Install done. Use 'zaf' to get started. Do not forget to do 'zaf upgrade' to upgrade plugins too!"
+	true
 }
 
 if [ -f "${ZAF_CFG_FILE}" ]; then
 	. "${ZAF_CFG_FILE}"
 fi
-ZAF_TMP_DIR="${ZAF_TMP_BASE-/tmp/zaf}-${USER}-$$"
+ZAF_TMP_DIR="/tmp/zaf-installer-tmp/"
+
+# If debug is on, do not remove tmp dir 
+if [ "$ZAF_DEBUG" -le 3 ]; then
+	trap "rm -rif ${ZAF_TMP_DIR}" EXIT
+	trap "rm -rif /tmp/zaf-installer" EXIT
+fi
+! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 
 case $1 in
 interactive)
         shift
-	zaf_configure interactive
+	INSTALL_MODE=interactive
+	zaf_preconfigure
+	zaf_configure "$@"
 	zaf_install_all
+	zaf_postconfigure
 	;;
 auto)
         shift
-	zaf_configure auto
+	INSTALL_MODE=auto
+	zaf_preconfigure
+	zaf_configure "$@"
         zaf_install_all
+	zaf_postconfigure
         ;;
 debug-auto)
         shift;
 	ZAF_DEBUG=4
-        zaf_configure auto
+	INSTALL_MODE=auto
+	zaf_preconfigure
+        zaf_configure "$@"
 	zaf_install_all
+	zaf_postconfigure
         ;;
 debug-interactive)
         shift;
         ZAF_DEBUG=4
-	zaf_configure interactive
+	INSTALL_MODE=interactive
+	zaf_preconfigure
+	zaf_configure "$@"
 	zaf_install_all
+	zaf_postconfigure
         ;;
 debug)
         shift;
         ZAF_DEBUG=4
-	zaf_configure auto
+	INSTALL_MODE=auto
+	zaf_preconfigure
+	zaf_configure "$@"
 	zaf_install_all
+	zaf_postconfigure
         ;;
 reconf)
         shift;
         rm -f $ZAF_CFG_FILE
-	zaf_configure auto
+	INSTALL_MODE=auto
+	zaf_preconfigure reconf
+	zaf_configure "$@"
+	zaf_postconfigure
         ;;
 install)
-        zaf_configure auto
+	INSTALL_MODE=auto
+	zaf_preconfigure nor
+        zaf_configure "$@"
 	zaf_install_all
+	zaf_postconfigure
 	;;
 *)
 	echo
 	echo "Please specify how to install."
 	echo "install.sh {auto|interactive|debug-auto|debug-interactive|reconf} [Agent-Options] [Zaf-Options]"
         echo "scratch means that config file will be created from scratch"
-        echo " Agent-Options: A_Option=value [...]"
+        echo " Agent-Options: Z_Option=value [...]"
         echo " Zaf-Options: ZAF_OPT=value [...]"
+	echo " To unset Agent-Option use Z_Option=''"
         echo 
 	echo "Example 1 (default install): install.sh auto"
 	echo 'Example 2 (preconfigure agent options): install.sh auto A_Server=zabbix.server A_ServerActive=zabbix.server A_Hostname=$(hostname)'

@@ -8,7 +8,7 @@ configure)
 	. /usr/lib/zaf/os.lib.sh
 	. /usr/lib/zaf/ctrl.lib.sh
 	cd /usr/lib/zaf && /usr/lib/zaf/install.sh reconf
-	zaf reinstall {PLUGINS}
+	zaf reinstall {PLUGINS} {IPLUGINS}
   fi
 ;;
 esac

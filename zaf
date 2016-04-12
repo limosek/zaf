@@ -18,9 +18,15 @@ done
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
-trap "rm -rif ${ZAF_TMP_DIR}" EXIT
-! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
+export ZAF_DEBUG
+
+# If debug is on, do not remove tmp dir 
+if [ "$ZAF_DEBUG" -le 3 ]; then
+	trap "rm -rif ${ZAF_TMP_DIR}" EXIT
+fi
+
+! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 
 if [ -f ./lib/zaf.lib.sh ]; then
 . ./lib/zaf.lib.sh
@@ -34,6 +40,25 @@ else
 [ -f ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh ] && . ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh
 fi
 
+zaf_shift(){
+	local s
+
+	if echo $1 |grep -q "="; then
+		if echo $2 |grep -q "="; then
+			if echo $3 |grep -q "="; then
+				s=3
+			else
+				s=2
+			fi
+		else
+			s=1
+		fi
+	else
+		s=0
+	fi
+	echo $s
+}
+
 case $1 in
 
 check-agent-config)
@@ -41,24 +66,30 @@ check-agent-config)
 	;;
 
 update)
-	zaf_wrn "Updating repository ${ZAF_PLUGINS_GITURL}..."
+	zaf_wrn "Updating repository ${ZAF_REPO_GITURL}..."
 	zaf_update_repo
 	;;
-
+upgrade)
+	zaf_list_plugins | while read plugin; do
+		ZAF_DEBUG=$ZAF_DEBUG $0 reinstall $plugin || zaf_err "Error upgrading $plugin"
+	done
+	;;
 show)
-	if [ -z "$2" ]; then
+	shift;
+	shift $(zaf_shift "$@")
+	if [ -z "$1" ]; then
 		zaf_list_plugins | while read plugin; do
 			zaf_plugin_info $ZAF_PLUGINS_DIR/$plugin/control.zaf
 		done
-	else		
-		if zaf_list_plugins | grep -q "^$2"; then
-			zaf_plugin_info $ZAF_PLUGINS_DIR/$2/control.zaf
+	else
+		if zaf_list_plugins | grep -q "^$1"; then
+			[ -f $ZAF_PLUGINS_DIR/$1/control.zaf ] && zaf_plugin_info $ZAF_PLUGINS_DIR/$1/control.zaf || zaf_err "Plugin $1 not installed."
 		else
-			if echo $2 |grep -q ^http; then
-				zaf_prepare_plugin "$2" "$ZAF_TMP_DIR/plugin"
+			if echo $1 |grep -q ^http; then
+				zaf_prepare_plugin "$1" "$ZAF_TMP_DIR/plugin"
 				zaf_plugin_info "$ZAF_TMP_DIR/plugin/control.zaf"
 			else
-				zaf_err "Plugin $2 not installed."
+				zaf_err "Plugin $1 not installed."
 			fi
 		fi
 	fi
@@ -69,33 +100,55 @@ plugins)
 	;;
 
 items)
-	if [ -z "$2" ]; then
+	shift
+	shift $(zaf_shift "$@")
+	if [ -z "$1" ]; then
 		zaf_list_items
 	else
-		zaf_list_plugin_items "$2"
+		zaf_list_plugin_items "$1"
 	fi
 	;;
 
 test)
-	if echo $2|grep -q '\.'; then
-		zaf_test_item "$2"
+	shift
+	shift $(zaf_shift "$@")
+	if echo $1|grep -q '\.'; then
+		zaf_test_item "$1"
 		exit
 	fi
-	if [ -n "$2" ]; then
-		shift
+	if [ -n "$1" ]; then
+		plugins="$@"
+	else
+		plugins="$(zaf_list_plugins)"
+	fi
+	for p in $plugins; do
+		! zaf_is_plugin $p && zaf_err "Unknown plugin $p"
+		for i in $(zaf_list_plugin_items $p); do 
+			echo $i: $(zaf_test_item $i)
+		done
+	done
+	;;
+get)
+	shift
+	shift $(zaf_shift "$@")
+	if echo $1|grep -q '\.'; then
+		zaf_get_item "$1"
+		exit
+	fi
+	if [ -n "$1" ]; then
 		plugins="$@"
 	else
 		plugins="$(zaf_list_plugins)"
 	fi
 	for p in $plugins; do
 		for i in $(zaf_list_plugin_items $p); do 
-			echo $i: $(zaf_test_item $i)
+			echo $i: $(zaf_get_item $i)
 		done
 	done
 	;;
-
 install)
-	shift;
+	shift
+	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 install plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
@@ -109,7 +162,8 @@ install)
 	;;
 
 reinstall)
-	shift;
+	shift
+	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 reinstall plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
@@ -123,7 +177,8 @@ reinstall)
 	;;
 
 remove)
-	shift;
+	shift
+	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 remove plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
@@ -135,26 +190,25 @@ remove)
 	;;
 
 self-upgrade)
+	shift
+	shift $(zaf_shift "$@")
+	[ -z "$1" ] && auto=auto
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-upgrade."
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
 	if ! which curl >/dev/null;
 	then
 		zaf_err "Curl not found. Cannot continue. Please install it."
 	fi
-	[ -z "$2" ] && auto=auto
-	set -e
-	mkdir -p /tmp/zaf-installer \
-	&& cd /tmp/zaf-installer \
-	&& (for i in lib/zaf.lib.sh lib/os.lib.sh lib/ctrl.lib.sh install.sh ; do echo  curl -f -k -s -L -o - "$ZAF_URL/$i" >&2; curl -f -k -s -L -o - "$ZAF_URL/$i"; done) >install.sh \
-	&& chmod +x install.sh \
-	&& exec ./install.sh $auto "$@"
+	zaf_fetch_url $ZAF_RAW_URL/$ZAF_VERSION/install.sh | exec sh -s $auto "$@"
 	exit
 	;;
 	
 self-remove)
+	shift
+	shift $(zaf_shift "$@")
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-remove."
 	. /etc/zaf.conf
-	if [ "$2" = "force" ]; then
+	if [ "$1" = "force" ]; then
 	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \
 		${ZAF_BIN_DIR}/zaf ${ZAF_AGENT_CONFIGD}/zaf_*
 	else
@@ -169,15 +223,20 @@ self-remove)
 
 *)
 	echo "$0 Version ${ZAF_VERSION}. Please use some of this commands:"
-	echo "$0 update			To update repo" 
+	echo "$0 Cmd [ZAF_OPTION=value] ..."
+	echo "Commands:"
+	echo "$0 update			To update repo (not plugins, similar to apt-get update)"
+	echo "$0 upgrade		To upgrade installed plugins from repo" 
 	echo "$0 plugins		To list installed plugins"
 	echo "$0 show [plugin]		To show installed plugins or plugin info"
 	echo "$0 items [plugin]		To list all suported items [for plugin]"
-	echo "$0 test [plugin[.item]]	To test all suported items [for plugin]"
+	echo "$0 test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]"
+	echo "$0 get [plugin[.item]]	To test [all] suported items by zabbix_get [for plugin]"
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
 	echo "$0 self-upgrade		To self-upgrade zaf"
 	echo "$0 self-remove		To self-remove zaf and its config"
+	echo
 	;;
 
 esac

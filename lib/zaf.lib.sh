@@ -2,6 +2,7 @@
 # Hardcoded variables
 ZAF_VERSION="master"
 ZAF_URL="https://github.com/limosek/zaf"
+ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 
 ############################################ Common routines
 
@@ -143,11 +144,11 @@ zaf_check_agent_config() {
 
 # Update repo
 zaf_update_repo() {
-	[ "$ZAF_GIT" != 1 ] && { zaf_err "Git is not installed. Exiting."; }
-	if [ -z "${ZAF_PLUGINS_GITURL}" ] || [ -z "${ZAF_REPO_DIR}" ]; then
+	[ "$ZAF_GIT" != 1 ] && { zaf_err "Git is disabled or is not installed. Exiting."; }
+	if [ -z "${ZAF_REPO_GITURL}" ] || [ -z "${ZAF_REPO_DIR}" ]; then
 		zaf_err "This system is not configured for git repository."
 	else
-		[ ! -d "${ZAF_REPO_DIR}" ] && git clone "${ZAF_PLUGINS_GITURL}" "${ZAF_REPO_DIR}"
+		[ ! -d "${ZAF_REPO_DIR}" ] && git clone "${ZAF_REPO_GITURL}" "${ZAF_REPO_DIR}"
 		(cd ${ZAF_REPO_DIR} && git pull)
 	fi
 }
@@ -171,7 +172,11 @@ zaf_get_plugin_url() {
 				if [ -n "${ZAF_PREPACKAGED_DIR}" ] &&  [ -d "${ZAF_PREPACKAGED_DIR}/$1" ]; then
 					url="${ZAF_PREPACKAGED_DIR}/$1"
 				else
-					zaf_err "Plugin $1 not found."
+					if [ -n "${ZAF_REPO_URL}" ]; then
+						url="${ZAF_REPO_URL}/$1" 
+					else
+						zaf_err "Cannot find plugin $1"
+					fi
 				fi
 			fi
 		fi
@@ -183,6 +188,7 @@ zaf_get_plugin_url() {
 zaf_plugin_info() {
 	local control="$1"
 
+	! [ -f "$control" ] && zaf_err "Control file $control not found."
 	plugin=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Plugin)
 	pdescription=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_moption Description)
 	pmaintainer=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Maintainer)
@@ -209,7 +215,7 @@ zaf_prepare_plugin() {
 	local plugindir
 	local control
 
-	url=$(zaf_get_plugin_url "$1")/control.zaf
+	url=$(zaf_get_plugin_url "$1")/control.zaf || exit $?
 	plugindir="$2"
 	control=${plugindir}/control.zaf
 	zaf_install_dir "$plugindir"
@@ -217,7 +223,7 @@ zaf_prepare_plugin() {
 	if zaf_fetch_url "$url" >"${control}"; then
 		zaf_ctrl_check_deps "${control}"
 	else
-		zaf_err "Cannot fetch or write control file!"
+		zaf_err "prepare_plugin: Cannot fetch or write control file $control from url $url!"
 	fi
 }
 
@@ -231,7 +237,7 @@ zaf_install_plugin() {
 		url=$(zaf_get_plugin_url "$1")
                 plugin=$(zaf_ctrl_get_global_block <"${ZAF_TMP_DIR}/plugin/control.zaf" | zaf_block_get_option Plugin)
 		plugindir="${ZAF_PLUGINS_DIR}"/$plugin
-		if zaf_prepare_plugin "$1" $plugindir; then
+		if [ -n "$plugin" ] && zaf_prepare_plugin "$1" $plugindir; then
 			control=${plugindir}/control.zaf
 			[ "$ZAF_DEBUG" -gt 0 ] && zaf_plugin_info "${control}"
 			zaf_ctrl_check_deps "${control}"
@@ -240,7 +246,7 @@ zaf_install_plugin() {
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 		else
-			zaf_err "Cannot install plugin $plugin to $plugindir!"
+			zaf_err "Cannot install plugin '$plugin' to $plugindir!"
 		fi
         else
             	zaf_err "Cannot prepare plugin $1"
@@ -266,7 +272,9 @@ zaf_discovery_plugins() {
 	zaf_list_plugins | zaf_discovery '{#PLUGIN}'
 }
 
-zaf_plugin_version() {
+# $1 plugin
+# $2 ctrl_option
+zaf_plugin_option() {
 	local plugindir
 	local cfile
 
@@ -276,10 +284,26 @@ zaf_plugin_version() {
 	if zaf_is_plugin "$1"; then
 		plugindir="${ZAF_PLUGINS_DIR}/$1"
 		cfile="$plugindir/control.zaf"
-		zaf_ctrl_get_global_option $cfile Version
+		zaf_ctrl_get_global_option $cfile $2
 	else
 		zaf_err "Plugin $1 not installed."
 	fi
+}
+
+zaf_plugin_version() {
+	zaf_plugin_option "$1" Version
+}
+zaf_plugin_maintainer() {
+	zaf_plugin_option "$1" Maintainer
+}
+zaf_plugin_url() {
+	zaf_plugin_option "$1" Url
+}
+zaf_plugin_web() {
+	zaf_plugin_option "$1" Web
+}
+zaf_plugin_template_url() {
+	echo $(zaf_plugin_option "$1" Url)/template.xml
 }
 
 zaf_list_plugin_items() {
@@ -312,7 +336,18 @@ zaf_list_items() {
 	done
 }
 
+zaf_get_item() {
+	if which zabbix_get >/dev/null; then
+		zabbix_get -s localhost -k "$1" || zaf_wrn "Cannot reach agent on localhost. Please localhost to Server list."
+		return 11
+	else
+		zaf_wrn "Please install zabbix_get binary to check items over network."
+		return 11
+	fi
+}
+
 zaf_test_item() {
+	[ "$USER" != "zabbix" ] && zaf_wrn "You are not zabbix user. Test will be run with your privileges and sudo access!"
 	$ZAF_AGENT_BIN -t "$1"
 }
 
@@ -323,4 +358,11 @@ zaf_remove_plugin() {
 	rm -f ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 }
 
+zaf_tolower() {
+	tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'
+}
+
+zaf_toupper() {
+	tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+}
 

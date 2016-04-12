@@ -12,28 +12,30 @@ zaf_configure_os_freebsd() {
     ZAF_AGENT_PKG="zabbix3-agent"
     ZAF_AGENT_CONFIG="/usr/local/etc/zabbix3/zabbix_agentd.conf"
     ZAF_AGENT_CONFIGD="/usr/local/etc/zabbix3/zabbix_agentd.conf.d/"
+    ZAF_AGENT_BIN="/usr/local/sbin/zabbix_agentd"
+    ZAF_AGENT_RESTART="service zabbix_agentd restart"
 }
 
 zaf_detect_system() {
 	if which dpkg >/dev/null; then
 		ZAF_PKG=dpkg
-		ZAF_OS=$(lsb_release -is|tr '[:upper:]' '[:lower:]')
-		ZAF_OS_CODENAME=$(lsb_release -cs|tr '[:upper:]' '[:lower:]')
+		ZAF_OS=$(lsb_release -is|zaf_tolower)
+		ZAF_OS_CODENAME=$(lsb_release -cs|zaf_tolower)
 		ZAF_CURL_INSECURE=0
 		ZAF_AGENT_PKG="zabbix-agent"
 		return
 	else if which rpm >/dev/null; then
 		ZAF_PKG="rpm"
-		ZAF_OS=$(lsb_release -is|tr '[:upper:]' '[:lower:]')
-		ZAF_OS_CODENAME=$(lsb_release -cs|tr '[:upper:]' '[:lower:]')
+		ZAF_OS=$(lsb_release -is|zaf_tolower)
+		ZAF_OS_CODENAME=$(lsb_release -cs|zaf_tolower)
 		ZAF_CURL_INSECURE=0
 		ZAF_AGENT_PKG="zabbix-agent"
 		return
 	else if which opkg >/dev/null; then
 		ZAF_PKG="opkg"
 		. /etc/openwrt_release
-		ZAF_OS="$(echo $DISTRIB_ID|tr '[:upper:]' '[:lower:]')"
-		ZAF_OS_CODENAME="$(echo $DISTRIB_CODENAME|tr '[:upper:]' '[:lower:]')"
+		ZAF_OS="$(echo $DISTRIB_ID|zaf_tolower)"
+		ZAF_OS_CODENAME="$(echo $DISTRIB_CODENAME|zaf_tolower)"
 		return	
 	else if which pkg >/dev/null; then
 		ZAF_PKG="pkg"
@@ -145,7 +147,7 @@ zaf_check_deps_rpm() {
 zaf_check_deps_opkg() {
 	local p
 	for p in $*; do
-		opkg info $p | grep -q 'Package:' || { echo "Missing package $p" >&2; return 1; }
+		opkg info $p | grep -q 'Package:' || { return 1; }
 	done
 }
 
@@ -154,7 +156,7 @@ zaf_check_deps_opkg() {
 zaf_check_deps_pkg() {
 	local p
 	for p in $*; do
-		pkg query -x "Package: %n" $p| grep -q 'Package:' || { echo "Missing package $p" >&2; return 1; }
+		pkg query -x "Package: %n" $p| grep -q 'Package:' || { return 1; }
 	done
 }
 

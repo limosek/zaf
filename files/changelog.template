@@ -1,4 +1,4 @@
-PACKAGE (0.1) zaf; urgency=medium
+PACKAGE (1.0) zaf; urgency=medium
 
   * Initial release.
 

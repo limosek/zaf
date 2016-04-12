@@ -71,12 +71,13 @@ zaf_ctrl_get_item_option() {
 zaf_ctrl_check_deps() {
 	local deps
 	deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-${ZAF_PKG}" )
-	zaf_os_specific zaf_check_deps $deps
+	if ! zaf_os_specific zaf_check_deps $deps; then
+		zaf_err "Missing one of dependend system packages: $deps"
+	fi
 	deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-bin" )
 	for cmd in $deps; do
 		if ! which $cmd >/dev/null; then
-			zaf_wrn "Missing binary dependency $cmd. Please install it first."
-                        return 1
+			zaf_err "Missing binary dependency $cmd. Please install it first."
 		fi
 	done
 }
@@ -139,7 +140,7 @@ zaf_ctrl_generate_cfg() {
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Function")
             if [ -n "$cmd" ]; then
-                $(which echo) -E "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd";
+                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $lock$cmd";
                 continue;
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
