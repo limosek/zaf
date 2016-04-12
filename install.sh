@@ -3,9 +3,11 @@
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
 if [ -z "$ZAF_URL" ]; then
 	# Runing as standalone install.sh. We have to download rest of files first.
-	[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=master
 	ZAF_URL="https://github.com/limosek/zaf/"
 fi
+
+[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=master
+[ -z "$ZAF_VERSION" ] && ZAF_VERSION=1.1master
 
 # Lite version of zaf_fetch_url, full version will be loaded later
 zaf_fetch_url(){
