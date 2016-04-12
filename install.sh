@@ -7,7 +7,6 @@ if [ -z "$ZAF_URL" ]; then
 fi
 
 [ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=master
-[ -z "$ZAF_VERSION" ] && ZAF_VERSION=1.1master
 
 # Lite version of zaf_fetch_url, full version will be loaded later
 zaf_fetch_url(){
@@ -22,7 +21,7 @@ zaf_fetch_url(){
 # Download tgz and extract to /tmp/zaf-installer
 zaf_download_files() {
 	rm -rf /tmp/zaf-installer
-	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C /tmp -zx && mv /tmp/zaf-$ZAF_VERSION /tmp/zaf-installer
+	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C /tmp -zx && mv /tmp/zaf-$ZAF_GITBRANCH /tmp/zaf-installer
 }
 
 if ! [ -f README.md ]; then
