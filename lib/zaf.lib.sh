@@ -273,6 +273,7 @@ zaf_install_plugin() {
 			zaf_ctrl_check_deps "${control}"
 			zaf_ctrl_install "$url" "${control}" "${plugindir}"
 			zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
+			zaf_ctrl_cron "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_generate_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
@@ -388,10 +389,10 @@ zaf_precache_item() {
 }
 
 zaf_remove_plugin() {
-	! [ -d ${ZAF_PLUGINS_DIR}/$1 ] && { zaf_err "Plugin $1 not installed!"; }
+	! zaf_is_plugin $1 && { zaf_err "Plugin $1 not installed!"; }
 	zaf_wrn "Removing plugin $1"
 	rm -rf ${ZAF_PLUGINS_DIR}/$1
-	rm -f ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+	rm -f ${ZAF_AGENT_CONFIGD}/zaf_$1.conf ${ZAF_CROND}/zaf_$1 ${ZAF_SUDOERSD}/zaf_$1
 }
 
 zaf_tolower() {

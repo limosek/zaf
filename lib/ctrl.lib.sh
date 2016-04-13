@@ -89,6 +89,9 @@ zaf_ctrl_check_deps() {
 zaf_ctrl_sudo() {
 	local pdir
 	local plugin
+	local sudo
+	local cmd
+	local parms
 
 	if ! which sudo >/dev/null; then
 		zaf_wrn "Sudo needed bud not installed?"
@@ -96,9 +99,14 @@ zaf_ctrl_sudo() {
 	pdir="$3"
 	plugin=$1
 	zaf_dbg "Installing sudoers entry $ZAF_SUDOERSD/zaf_$plugin"
-	(echo -n "zabbix ALL=NOPASSWD:SETENV: "
-	zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}";
-	echo ) >$ZAF_SUDOERSD/zaf_$plugin
+	sudo=$(zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}")
+	cmd=$(echo $sudo | cut -d ' ' -f 1)
+	parms=$(echo $sudo | cut -d ' ' -f 2-)
+	if which $cmd >/dev/null ; then
+		(echo "zabbix ALL=NOPASSWD:SETENV: $(which $cmd) $(echo $parms | tr '%' '*')";echo) >$ZAF_SUDOERSD/zaf_$plugin
+	else
+		zaf_wrn "Cannot find binary $cmd for sudo. Ignoring sudo."
+	fi
 }
 
 # Install crontab config from control

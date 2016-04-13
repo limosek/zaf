@@ -11,7 +11,7 @@ zaf_cache_clean(){
 }
 
 # Get cache key from requested param
-zaf_cachekey(){
+zaf_cache_key(){
 	echo "$1" | md5sum - | cut -d ' ' -f 1
 }
 
@@ -23,7 +23,7 @@ zaf_tocache(){
 	local key
 	local value
 	local lifetime
-	key=$(zaf_cachekey "$1")
+	key=$(zaf_cache_key "$1")
 	echo "$2" >$ZAF_CACHE_DIR/$key
 	echo "$1" >$ZAF_CACHE_DIR/$key.key
 	touch -m -d "$3 seconds" $ZAF_CACHE_DIR/$key.tme
@@ -36,13 +36,25 @@ zaf_tocache(){
 zaf_tocache_stdin(){
 	local key
 	local lifetime
-
-	key=$(zaf_cachekey "$1")
+	key=$(zaf_cache_key "$1")
 	cat >$ZAF_CACHE_DIR/$key
-	echo "$1" >$ZAF_CACHE_DIR/$key.key
-	touch -m -d "$3 seconds" $ZAF_CACHE_DIR/$key.tme
-	zaf_trc "Cache: Saving entry $1($key)"
-	cat $ZAF_CACHE_DIR/$key
+	if [ -s $ZAF_CACHE_DIR/$key ]; then
+		zaf_trc "Cache: Saving entry $1($key)"
+		echo "$1" >$ZAF_CACHE_DIR/$key.key
+		touch -m -d "$3 seconds" $ZAF_CACHE_DIR/$key.tme
+		cat $ZAF_CACHE_DIR/$key
+	else
+		rm $ZAF_CACHE_DIR/$key
+	fi
+}
+
+# Remove entry from cache
+# $1 key
+zaf_cache_delentry(){
+	local key
+	key=$(zaf_cache_key "$1")
+	zaf_trc "Cache: removing $1($key) from cache"
+	rm -f "$ZAF_CACHE_DIR/$key*"
 }
 
 # Get object from cache
@@ -50,7 +62,7 @@ zaf_tocache_stdin(){
 zaf_fromcache(){
 	local key
 	local value
-	key=$(zaf_cachekey "$1")
+	key=$(zaf_cache_key "$1")
 	if [ -f $ZAF_CACHE_DIR/$key ]; then
 		if [ "$ZAF_CACHE_DIR/$key.tme" -nt "$ZAF_CACHE_DIR/$key" ]; then
 			zaf_trc "Cache: serving $1($key) from cache"
