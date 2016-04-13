@@ -231,8 +231,14 @@ zaf_plugin_info() {
 	[ -n "$pmaintainer" ] && echo "Maintainer: $pmaintainer"
 	[ -n "$purl" ] && echo "Url: $purl"
 	[ -n "$phome" ] && echo "Home: $phome"
-	echo
-	echo "Items: $pitems"
+	echo 
+	if zaf_is_plugin "$(basename $plugin)"; then
+		echo -n "Defined items: "; zaf_list_plugin_items $plugin
+		echo -n "Test items: "; zaf_list_plugin_items $plugin test
+		echo -n "Precache items: "; zaf_list_plugin_items $plugin precache
+	else
+		echo "Items: $pitems"
+	fi
 	echo
 }
 
@@ -338,11 +344,15 @@ zaf_plugin_template_url() {
 	echo $(zaf_plugin_option "$1" Url)/template.xml
 }
 
+# $1 plugin
+# $2 test to get test items, precache to get items to precache
 zaf_list_plugin_items() {
 	local items
 	local i
 	local p
 	local key
+	local testparms
+	local precache
 
 	if ! zaf_is_plugin "$1"; then
 		zaf_err "Missing plugin name or plugin $1 unknown. ";
@@ -352,12 +362,25 @@ zaf_list_plugin_items() {
 	items=$(zaf_ctrl_get_items <$cfile)
 	for i in $items; do
 		p=$(zaf_ctrl_get_item_option $cfile $i "Parameters")
+		testparms=$(zaf_ctrl_get_item_option $cfile $i "Testparameters")
+		precache=$(zaf_ctrl_get_item_option $cfile $i "Precache")
 		if [ -n "$p" ]; then
-			key="$1.$i[]"
+			if [ -n "$testparms" ] && [ "$2" = "test" ]; then
+				for tp in $testparms; do
+					echo -n "$1.$i[$tp] "
+				done
+			else
+				if [ -n "$precache" ] && [ "$2" = "precache" ]; then
+					for tp in $precache; do
+						echo -n "$1.$i[$tp] "
+					done
+				fi
+				[ "$2" != "test" ] && key="$1.$i[]"
+			fi
 		else
 			key="$1.$i"
 		fi
-		echo -n "$key "
+		[ "$2" != "precache" ] && echo -n "$key "
 	done
 	echo
 }
@@ -379,12 +402,12 @@ zaf_get_item() {
 }
 
 zaf_test_item() {
-	[ "$USER" != "zabbix" ] && zaf_wrn "You are not zabbix user. Test will be run with your privileges and sudo access!"
 	$ZAF_AGENT_BIN -t "$1"
 }
 
 zaf_precache_item() {
-	cmd=$(grep "^UserParameter=$item" $ZAF_AGENT_CONFIGD/zaf*.conf  | cut -d ',' -f 2-)
+	cmd=$(grep "^UserParameter=$item" $ZAF_AGENT_CONFIGD/zaf*.conf  | cut -d ',' -f 2- | sed -e "s/_cache/_nocache/")
+	zaf_wrn "Precaching item $item[$(echo $*| tr ' ' ',')] ($cmd)"
 	eval $cmd
 }
 

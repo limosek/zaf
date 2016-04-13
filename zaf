@@ -144,6 +144,7 @@ items)
 	;;
 
 test)
+	[ "$USER" != "zabbix" ] && zaf_wrn "You are not zabbix user. Test will be run with your privileges and sudo access!"
 	shift
 	shift $(zaf_shift "$@")
 	if echo $1|grep -q '\.'; then
@@ -157,8 +158,9 @@ test)
 	fi
 	for p in $plugins; do
 		! zaf_is_plugin $p && zaf_err "Unknown plugin $p"
-		for i in $(zaf_list_plugin_items $p); do 
+		for i in $(zaf_list_plugin_items $p test); do 
 			echo $i: $(zaf_test_item $i)
+			echo
 		done
 	done
 	;;
@@ -175,8 +177,9 @@ get)
 		plugins="$(zaf_list_plugins)"
 	fi
 	for p in $plugins; do
-		for i in $(zaf_list_plugin_items $p); do 
+		for i in $(zaf_list_plugin_items $p test); do 
 			echo $i: $(zaf_get_item $i)
+			echo
 		done
 	done
 	;;
@@ -185,9 +188,17 @@ precache)
 	shift
 	shift $(zaf_shift "$@")
 	for i in $*; do
-		item=$(echo $i | cut -d '[' -f 1)
-		params=$(echo $i | cut -d '[' -f 2 | cut -d ']' -f 1 | tr ',' ' ')
-		zaf_precache_item $params
+		if zaf_is_plugin $i; then
+			for j in $(zaf_list_plugin_items $i precache); do
+				item=$(echo $j | cut -d '[' -f 1)
+				params=$(echo $j | cut -d '[' -f 2 | cut -d ']' -f 1 | tr ',' ' ')
+				zaf_precache_item $params >/dev/null
+			done
+		else
+			item=$(echo $i | cut -d '[' -f 1)
+			params=$(echo $i | cut -d '[' -f 2 | cut -d ']' -f 1 | tr ',' ' ')
+			zaf_precache_item $params >/dev/null
+		fi
 	done
 	;;
 
@@ -196,8 +207,8 @@ install)
 	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 install plugin [plugin]..."
 	for p in $@; do
-		if zaf_is_plugin "$p"; then
-			zaf_wrn "Plugin $p already installed. Skipping installation."
+		if zaf_is_plugin "$(basename $p)"; then
+			zaf_wrn "Plugin $(basename $p) already installed. Skipping installation."
 			continue
 		fi
 		zaf_install_plugin "$p"
@@ -334,6 +345,7 @@ api)
 	echo "$0 items [plugin]		To list all suported items [for plugin]"
 	echo "$0 test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]"
 	echo "$0 get [plugin[.item]]	To test [all] suported items by zabbix_get [for plugin]"
+	echo "$0 precache [plugin[.item]]	To precache [all] suported items"
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
 	echo "$0 api			To zabbix API functions. See $0 api for more info."

@@ -21,7 +21,8 @@ export ZAF_LIB_DIR
 export ZAF_TMP_DIR
 export ZAF_PLUGINS_DIR
 
-if [ "$1" = "_cache" ]; then
+if [ "$1" = "_cache" ] || [ "$1" = "_nocache" ] ; then
+	[ "$1" = "_nocache" ] && export ZAF_NOCACHE=1
 	shift
 	seconds=$1
 	shift
