@@ -82,7 +82,7 @@ git clone https://github.com/limosek/zaf.git \
  && git checkout master \
  && git clone https://github.com/limosek/zaf-plugins.git \
  && make deb PLUGINS="./zaf-plugins/fsx" IPLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
-sudo dpkg -i out/zaf-1.1master.deb
+sudo dpkg -i out/zaf-1.2master.deb
 ```
 General usage:
 ```
@@ -124,7 +124,7 @@ During plugin installation, zaf will check all dependencies, do install binaries
 Zaf binary can be installed on any system from openwrt to big system. It has minimal dependencies and is shell based. Is has minimal size (up to 50kb of code). It can be used for installing, removing and testing zaf plugin items. Zaf should be run as root.
 ```
 zaf
-zaf Version 1.1master. Please use some of this commands:
+zaf Version 1.2master. Please use some of this commands:
 zaf update			To update repo
 zaf plugins			To list installed plugins
 zaf show [plugin]		To show installed plugins or plugin info
