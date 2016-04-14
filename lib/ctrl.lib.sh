@@ -22,7 +22,7 @@ zaf_ctrl_get_item_block() {
 # Get global plugin block body from stdin
 # $1 itemname
 zaf_ctrl_get_global_block() {
-	grep -v '^#' | awk '{ i=0;
+	grep -v '^#' | awk '{ i=0; print $0;
 	while (i==0) {
 		getline;
 		if (/^Item /) exit;
@@ -33,7 +33,7 @@ zaf_ctrl_get_global_block() {
 # Get item multiline option
 # $1 optionname
 zaf_block_get_moption() {
-	awk '/^'$1'::$/ { i=0;
+	awk '/^'$1'::$/ { i=0; print $0;
 	while (i==0) {
 		getline;
 		if (/^::$/) {i=1; continue;};
