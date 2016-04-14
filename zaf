@@ -273,13 +273,18 @@ api)
 		gid=$(zaf_zbxapi_gethostgroupid "$3") || exit 1
 		zaf_zbxapi_gethostsingroup $gid
 		;;
-	export-hosts-in-group)
+	export-hosts)
 		shift; shift
-		gid=$(zaf_zbxapi_gethostgroupid "$1") || exit 1
+		[ -z "$1" ] && zaf_err "$0 api export-hosts dir [hostgroup]"
+		dir="$1"
 		shift
-		hosts=$(zaf_zbxapi_gethostsingroup $gid)
-		dir="."
-		[ -n "$1" ] && dir="$1"
+		if [ -n "$1" ]; then
+			gid=$(zaf_zbxapi_gethostgroupid "$1") || exit 1
+			shift
+			hosts=$(zaf_zbxapi_gethostsingroup $gid)
+		else
+			hosts=$(zaf_zbxapi_gethostid)
+		fi
 		zaf_wrn "Will backup this hosts: $hosts"
 		zaf_wrn "Output dir: $dir"
 		for h in $hosts; do
@@ -311,8 +316,8 @@ api)
 		;;
 	export-templates)
 		shift; shift
-		dir="."
-		[ -n "$1" ] && dir="$1"
+		[ -z "$1" ] && zaf_err "$0 api export-templates dir"
+		dir="$1"
 		templates=$(zaf_zbxapi_gettemplateid)
 		zaf_wrn "Will backup this templates: $templates"
 		zaf_wrn "Output dir: $dir"
@@ -362,11 +367,11 @@ api)
 		echo "host 'hostid'			Get hostname from hostid"
 		echo "hostgroupid 'hostgroup'		Get hostgroup id from hostgroup"
 		echo "hosts 'hostgroup'			Get hosts in group"
-		echo "export-hosts-in-group 'hostgroup' [dir]	Backup all hosts in group (get their config from zabbix and save to dir/hostname.xml)" 
+		echo "export-hosts dir [hostgroup]	Backup all hosts [in group] (get their config from zabbix and save to dir/hostname.xml)" 
 		echo "export-host 'host'		Backup host (get config from zabbix to stdout)"
 		echo "import-template {plugin|file}	Import template for plugin or from file"
 		echo "export-template 'name'		Export template to stdout"
-		echo "export-templates 	[dir]		Export all template to dir"
+		echo "export-templates dir		Export all template to dir"
 		echo
 		exit
 		;;
