@@ -1,29 +1,66 @@
 #!/bin/sh
 
+if [ -z "$secondstage" ]; then
 ZAF_CFG_FILE="/etc/zaf.conf"
-if [ -f $ZAF_CFG_FILE ]; then
-	. $ZAF_CFG_FILE
-else
-	echo "Missing config file $ZAF_CFG_FILE! Exiting."
-	exit 2
+	if [ -f $ZAF_CFG_FILE ]; then
+		. $ZAF_CFG_FILE
+	else
+		echo "Missing config file $ZAF_CFG_FILE! Exiting."
+		exit 2
+	fi
+
+	# Read options as config for ZAF
+	for pair in "$@"; do
+    		if echo $pair | grep -qE '^ZAF\_(.*)='; then
+    			option=$(echo $pair|cut -d '=' -f 1)
+    			value=$(echo $pair|cut -d '=' -f 2-)
+    			eval "${option}='$value'"
+			export secondstage=1
+    		else
+			params="$params $pair"
+    		fi
+	done
+	export $(set |grep ^ZAF_ | cut -d '=' -f 1)
+	# If some variables in cmd were stripped, rerun only with right arguments and exported variables
+	[ -n "$secondstage" ] && exec $0 $params
 fi
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
-trap "rm -rif ${ZAF_TMP_DIR}" EXIT
-! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
+[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}c
+
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
+export ZAF_DEBUG
+
+# If debug is on, do not remove tmp dir 
+if [ "$ZAF_DEBUG" -le 3 ]; then
+	trap "rm -rif ${ZAF_TMP_DIR}" EXIT
+fi
+
+! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
+if ! [ -d "${ZAF_CACHE_DIR}" ]; then
+	mkdir "${ZAF_CACHE_DIR}"
+fi
 
 if [ -f ./lib/zaf.lib.sh ]; then
 . ./lib/zaf.lib.sh
 . ./lib/os.lib.sh
 . ./lib/ctrl.lib.sh
+. ./lib/cache.lib.sh
+. ./lib/zbxapi.lib.sh
 [ -f ./lib/zaf.${ZAF_OS}.sh ] && . ./lib/zaf.${ZAF_OS}.sh
 else 
 . ${ZAF_LIB_DIR}/zaf.lib.sh
 . ${ZAF_LIB_DIR}/os.lib.sh
 . ${ZAF_LIB_DIR}/ctrl.lib.sh
+. ${ZAF_LIB_DIR}/cache.lib.sh
+. ${ZAF_LIB_DIR}/zbxapi.lib.sh
 [ -f ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh ] && . ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh
+fi
+
+if zaf_is_root; then
+	chgrp zabbix "${ZAF_CACHE_DIR}"
+	chmod g+w "${ZAF_CACHE_DIR}"
 fi
 
 case $1 in
@@ -32,24 +69,50 @@ check-agent-config)
 	zaf_check_agent_config
 	;;
 
-update)
-	zaf_update_repo
+cache-clean)
+	zaf_cache_clean
 	;;
 
+userparms)
+	for plugin in $(zaf_list_plugins); do
+		plugindir=$ZAF_PLUGINS_DIR/$plugin
+		control=$plugindir/control.zaf
+		zaf_ctrl_generate_cfg "${control}" "${plugin}" \
+			  | zaf_far '{PLUGINDIR}' "${plugindir}"
+	done
+	;;
+
+agent-config)
+	for plugin in $(zaf_list_plugins); do
+		plugindir=$ZAF_PLUGINS_DIR/$plugin
+		control=$plugindir/control.zaf
+		zaf_ctrl_generate_cfg "${control}" "${plugin}" \
+			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+	done
+	;;
+
+update)
+	zaf_wrn "Updating repository ${ZAF_REPO_GITURL}..."
+	zaf_update_repo
+	;;
+upgrade)
+	ZAF_DEBUG=$ZAF_DEBUG $0 reinstall $(zaf_list_plugins)
+	;;
 show)
-	if [ -z "$2" ]; then
+	shift;
+	if [ -z "$1" ]; then
 		zaf_list_plugins | while read plugin; do
 			zaf_plugin_info $ZAF_PLUGINS_DIR/$plugin/control.zaf
 		done
-	else		
-		if zaf_list_plugins | grep -q "^$2"; then
-			zaf_plugin_info $ZAF_PLUGINS_DIR/$2/control.zaf
+	else
+		if zaf_list_plugins | grep -q "^$1"; then
+			[ -f $ZAF_PLUGINS_DIR/$1/control.zaf ] && zaf_plugin_info $ZAF_PLUGINS_DIR/$1/control.zaf || zaf_err "Plugin $1 not installed."
 		else
-			if echo $2 |grep -q ^http; then
-				zaf_prepare_plugin "$2" "$ZAF_TMP_DIR/plugin"
+			if echo $1 |grep -q ^http; then
+				zaf_prepare_plugin "$1" "$ZAF_TMP_DIR/plugin"
 				zaf_plugin_info "$ZAF_TMP_DIR/plugin/control.zaf"
 			else
-				zaf_err "Plugin $2 not installed."
+				zaf_err "Plugin $1 not installed."
 			fi
 		fi
 	fi
@@ -60,33 +123,76 @@ plugins)
 	;;
 
 items)
-	if [ -z "$2" ]; then
+	shift
+	if [ -z "$1" ]; then
 		zaf_list_items
 	else
-		zaf_list_plugin_items "$2"
+		zaf_list_plugin_items "$1"
 	fi
 	;;
 
 test)
-	if [ -n "$2" ]; then
-		shift
+	[ "$USER" != "zabbix" ] && zaf_wrn "You are not zabbix user. Test will be run with your privileges and sudo access!"
+	shift
+	if echo $1|grep -q '\.'; then
+		zaf_test_item "$1"
+		exit
+	fi
+	if [ -n "$1" ]; then
 		plugins="$@"
 	else
 		plugins="$(zaf_list_plugins)"
 	fi
 	for p in $plugins; do
-		for i in $(zaf_list_plugin_items $p); do 
+		! zaf_is_plugin $p && zaf_err "Unknown plugin $p"
+		for i in $(zaf_list_plugin_items $p test); do 
 			echo $i: $(zaf_test_item $i)
+			echo
+		done
+	done
+	;;
+get)
+	shift
+	if echo $1|grep -q '\.'; then
+		zaf_get_item "$1"
+		exit
+	fi
+	if [ -n "$1" ]; then
+		plugins="$@"
+	else
+		plugins="$(zaf_list_plugins)"
+	fi
+	for p in $plugins; do
+		for i in $(zaf_list_plugin_items $p test); do 
+			echo $i: $(zaf_get_item $i)
+			echo
 		done
 	done
 	;;
 
+precache)
+	shift
+	for i in $*; do
+		if zaf_is_plugin $i; then
+			for j in $(zaf_list_plugin_items $i precache); do
+				item=$(echo $j | cut -d '[' -f 1)
+				params=$(echo $j | cut -d '[' -f 2 | cut -d ']' -f 1 | tr ',' ' ')
+				zaf_precache_item $params >/dev/null
+			done
+		else
+			item=$(echo $i | cut -d '[' -f 1)
+			params=$(echo $i | cut -d '[' -f 2 | cut -d ']' -f 1 | tr ',' ' ')
+			zaf_precache_item $params >/dev/null
+		fi
+	done
+	;;
+
 install)
-	shift;
-	[ -z "$@" ] && echo "$0 install plugin [plugin]..."
+	shift
+	[ -z "$1" ] && echo "$0 install plugin [plugin]..."
 	for p in $@; do
-		if zaf_is_plugin "$p"; then
-			zaf_wrn "Plugin $p already installed. Skipping installation."
+		if zaf_is_plugin "$(basename $p)"; then
+			zaf_wrn "Plugin $(basename $p) already installed. Skipping installation."
 			continue
 		fi
 		zaf_install_plugin "$p"
@@ -96,8 +202,8 @@ install)
 	;;
 
 reinstall)
-	shift;
-	[ -z "$@" ] && echo "$0 reinstall plugin [plugin]..."
+	shift
+	[ -z "$1" ] && echo "$0 reinstall plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
 			zaf_remove_plugin "$(basename $p)"
@@ -110,8 +216,8 @@ reinstall)
 	;;
 
 remove)
-	shift;
-	[ -z "$@" ] && echo "$0 remove plugin [plugin]..."
+	shift
+	[ -z "$1" ] && echo "$0 remove plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
 			zaf_remove_plugin "$p"
@@ -122,17 +228,23 @@ remove)
 	;;
 
 self-upgrade)
+	shift
+	[ -z "$1" ] && auto=auto
+	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-upgrade."
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
-	if zaf_fetch_url $ZAF_URL/install.sh >/tmp/zaf-installer/install.sh; then
-		cd /tmp/zaf-installer && ./install.sh
-	else
-		echo "Cannot fetch uri $ZAF_URL/install.sh!"; 
+	if ! which curl >/dev/null;
+	then
+		zaf_err "Curl not found. Cannot continue. Please install it."
 	fi
+	zaf_fetch_url $ZAF_RAW_URL/$ZAF_GITBRANCH/install.sh | exec sh -s $auto "$@"
+	exit
 	;;
 	
 self-remove)
+	shift
+	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-remove."
 	. /etc/zaf.conf
-	if [ "$2" = "force" ]; then
+	if [ "$1" = "force" ]; then
 	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \
 		${ZAF_BIN_DIR}/zaf ${ZAF_AGENT_CONFIGD}/zaf_*
 	else
@@ -143,18 +255,151 @@ self-remove)
 	  echo 
 	  echo "To continue, please do $0 self-remove force"
 	fi
-      ;;
+      	;;
+
+api)
+	zaf_zbxapi_login
+	case $2 in
+	hostid)
+		zaf_zbxapi_gethostid "$3"
+		;;
+	host)
+		zaf_zbxapi_gethost "$3"
+		;;	
+	hostgroupid)
+		zaf_zbxapi_gethostgroupid "$3"
+		;;	
+	hosts)
+		gid=$(zaf_zbxapi_gethostgroupid "$3") || exit 1
+		zaf_zbxapi_gethostsingroup $gid
+		;;
+	export-hosts)
+		shift; shift
+		[ -z "$1" ] && zaf_err "$0 api export-hosts dir [hostgroup]"
+		dir="$1"
+		shift
+		if [ -n "$1" ]; then
+			gid=$(zaf_zbxapi_gethostgroupid "$1") || exit 1
+			shift
+			hosts=$(zaf_zbxapi_gethostsingroup $gid)
+		else
+			hosts=$(zaf_zbxapi_gethostid)
+		fi
+		zaf_wrn "Will backup this hosts: $hosts"
+		zaf_wrn "Output dir: $dir"
+		for h in $hosts; do
+			if zaf_bglimit 5; then
+				(
+				hn=$(zaf_zbxapi_gethost $h)
+				zaf_wrn "Exporting host $hn($h)..."
+				zaf_zbxapi_export_host $h >"$dir/$hn.xml"
+				) &
+			else
+				hn=$(zaf_zbxapi_gethost $h)
+				zaf_wrn "Exporting host $hn($h)..."
+				zaf_zbxapi_export_host $h >"$dir/$hn.xml"
+			fi
+		done
+		wait
+		;;
+	export-host)
+		shift; shift
+		hostid=$(zaf_zbxapi_gethostid "$1") || exit 1
+		zaf_wrn "Exporting host $3($hostid)..."
+		zaf_zbxapi_export_host $hostid
+		;;
+	export-template)
+		shift; shift
+		templateid=$(zaf_zbxapi_gettemplateid "$1") || exit 1
+		zaf_wrn "Exporting template $3($hostid)..."
+		zaf_zbxapi_export_template $templateid
+		;;
+	export-templates)
+		shift; shift
+		[ -z "$1" ] && zaf_err "$0 api export-templates dir"
+		dir="$1"
+		templates=$(zaf_zbxapi_gettemplateid)
+		zaf_wrn "Will backup this templates: $templates"
+		zaf_wrn "Output dir: $dir"
+		for t in $templates; do
+			if zaf_bglimit 5; then
+				(
+				tn=$(zaf_zbxapi_gettemplate $t)
+				zaf_wrn "Exporting template $tn($t)..."
+				zaf_zbxapi_export_template $t >"$dir/$tn.xml"
+				) &
+			else
+				tn=$(zaf_zbxapi_gettemplate $t)
+				zaf_wrn "Exporting template $tn($t)..."
+				zaf_zbxapi_export_template $t >"$dir/$tn.xml"
+			fi
+		done
+		wait
+		;;
+	import-template)
+		shift; shift
+		if zaf_is_plugin $1; then
+			if [ -f "$ZAF_PLUGINS_DIR/$1/template.xml" ]; then
+				template="$ZAF_PLUGINS_DIR/$1/template.xml"
+				zaf_wrn "Importing template $template"
+				zaf_zbxapi_import_template $template || zaf_err "Error importing template"
+			else
+				url="$(zaf_plugin_option $1 Template)"
+				if [ -n "$url" ]; then
+					zaf_fetch_url $url | zaf_zbxapi_import_template || zaf_err "Error importing template"
+				else
+					url="$(zaf_plugin_option $1 Url)"
+					zaf_fetch_url $url/template.xml | zaf_zbxapi_import_template || zaf_err "Error importing template"
+				fi
+			fi
+		else
+			if [ -f $1 ]; then
+				zaf_wrn "Importing template $1"
+				zaf_zbxapi_import_template $1 || zaf_err "Error importing template"
+			else
+				zaf_err "Unknown plugin $1!"
+			fi
+		fi
+		;;
+	*)
+		echo "$0 api command [parameters]"
+		echo "hostid 'host'			Get hostid from hostname"
+		echo "host 'hostid'			Get hostname from hostid"
+		echo "hostgroupid 'hostgroup'		Get hostgroup id from hostgroup"
+		echo "hosts 'hostgroup'			Get hosts in group"
+		echo "export-hosts dir [hostgroup]	Backup all hosts [in group] (get their config from zabbix and save to dir/hostname.xml)" 
+		echo "export-host 'host'		Backup host (get config from zabbix to stdout)"
+		echo "import-template {plugin|file}	Import template for plugin or from file"
+		echo "export-template 'name'		Export template to stdout"
+		echo "export-templates dir		Export all template to dir"
+		echo
+		exit
+		;;
+	esac
+	;;
 
 *)
-	echo "$0 update			To update repo" 
+	echo "$0 Version ${ZAF_VERSION}. Please use some of this commands:"
+	echo "$0 Cmd [ZAF_OPTION=value] [ZAF_CTRL_Option=value] [ZAF_CTRLI_Item_Option=value] ..."
+	echo "Commands:"
+	echo "$0 update			To update repo (not plugins, similar to apt-get update)"
+	echo "$0 upgrade		To upgrade installed plugins from repo" 
 	echo "$0 plugins		To list installed plugins"
 	echo "$0 show [plugin]		To show installed plugins or plugin info"
 	echo "$0 items [plugin]		To list all suported items [for plugin]"
-	echo "$0 test [plugin]		To test all suported items [for plugin]"
+	echo "$0 test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]"
+	echo "$0 get [plugin[.item]]	To test [all] suported items by zabbix_get [for plugin]"
+	echo "$0 precache [plugin[.item]]	To precache [all] suported items"
 	echo "$0 install plugin		To install plugin"
 	echo "$0 remove plugin		To remove plugin" 
+	echo "$0 api			To zabbix API functions. See $0 api for more info."
+	echo "$0 userparms		See userparms generated from zaf on stdout"
+	echo "$0 agent-config		Reconfigure zabbix userparms in $ZAF_AGENT_CONFIGD"
+
 	echo "$0 self-upgrade		To self-upgrade zaf"
 	echo "$0 self-remove		To self-remove zaf and its config"
+	echo "$0 cache-clean		To remove all entries from cache"
+	echo
 	;;
 
 esac

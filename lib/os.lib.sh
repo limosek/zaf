@@ -8,26 +8,39 @@ zaf_configure_os_openwrt() {
     ZAF_CURL_INSECURE=1
 }
 
+zaf_configure_os_freebsd() {
+    ZAF_AGENT_PKG="zabbix3-agent"
+    ZAF_AGENT_CONFIG="/usr/local/etc/zabbix3/zabbix_agentd.conf"
+    ZAF_AGENT_CONFIGD="/usr/local/etc/zabbix3/zabbix_agentd.conf.d/"
+    ZAF_AGENT_BIN="/usr/local/sbin/zabbix_agentd"
+    ZAF_AGENT_RESTART="service zabbix_agentd restart"
+}
+
 zaf_detect_system() {
 	if which dpkg >/dev/null; then
 		ZAF_PKG=dpkg
-		ZAF_OS=$(lsb_release -is|tr '[:upper:]' '[:lower:]')
-		ZAF_OS_CODENAME=$(lsb_release -cs|tr '[:upper:]' '[:lower:]')
+		ZAF_OS=$(lsb_release -is|zaf_tolower)
+		ZAF_OS_CODENAME=$(lsb_release -cs|zaf_tolower)
 		ZAF_CURL_INSECURE=0
 		ZAF_AGENT_PKG="zabbix-agent"
 		return
 	else if which rpm >/dev/null; then
 		ZAF_PKG="rpm"
-		ZAF_OS=$(lsb_release -is|tr '[:upper:]' '[:lower:]')
-		ZAF_OS_CODENAME=$(lsb_release -cs|tr '[:upper:]' '[:lower:]')
+		ZAF_OS=$(lsb_release -is|zaf_tolower)
+		ZAF_OS_CODENAME=$(lsb_release -cs|zaf_tolower)
 		ZAF_CURL_INSECURE=0
 		ZAF_AGENT_PKG="zabbix-agent"
 		return
 	else if which opkg >/dev/null; then
 		ZAF_PKG="opkg"
 		. /etc/openwrt_release
-		ZAF_OS="$(echo $DISTRIB_ID|tr '[:upper:]' '[:lower:]')"
-		ZAF_OS_CODENAME="$(echo $DISTRIB_CODENAME|tr '[:upper:]' '[:lower:]')"
+		ZAF_OS="$(echo $DISTRIB_ID|zaf_tolower)"
+		ZAF_OS_CODENAME="$(echo $DISTRIB_CODENAME|zaf_tolower)"
+		return	
+	else if which pkg >/dev/null; then
+		ZAF_PKG="pkg"
+		ZAF_OS="freebsd"
+		ZAF_OS_CODENAME="$(freebsd-version|cut -d '-' -f 1)"
 		return	
 	else
 		ZAF_PKG="unknown"
@@ -35,6 +48,7 @@ zaf_detect_system() {
 		ZAF_OS_CODENAME="unknown"
 		ZAF_AGENT_PKG=""
                 return
+	   fi
 	  fi
 	 fi
 	fi
@@ -101,22 +115,31 @@ zaf_uninstall(){
 # Automaticaly install agent on debian
 # For another os, create similar function (install_zabbix_centos)
 zaf_install_agent_debian() {
-    zaf_fetch_url "http://repo.zabbix.com/zabbix/3.0/debian/pool/main/z/zabbix-release/zabbix-release_3.0-1+${ZAF_CODENAME}_all.deb" >"/tmp/zaf-installer/zabbix-release_3.0-1+${ZAF_CODENAME}_all.deb" \
-	&& dpkg -i "/tmp/zaf-installer/zabbix-release_3.0-1+${ZAF_CODENAME}_all.deb" \
+    zaf_fetch_url "http://repo.zabbix.com/zabbix/3.0/debian/pool/main/z/zabbix-release/zabbix-release_3.0-1+${ZAF_OS_CODENAME}_all.deb" >"/tmp/zaf-installer/zabbix-release_3.0-1+${ZAF_OS_CODENAME}_all.deb" \
+	&& dpkg -i "/tmp/zaf-installer/zabbix-release_3.0-1+${ZAF_OS_CODENAME}_all.deb" \
 	&& apt-get update \
-	&& apt-get install $ZAF_AGENT_PKG
+	&& apt-get install -y -q $ZAF_AGENT_PKG
+}
+
+zaf_install_agent_opkg() {
+    opkg update && \
+    opkg install $ZAF_AGENT_PKG
 }
 
 # Check if dpkg dependency is met
 # $* - packages
 zaf_check_deps_dpkg() {
-	dpkg-query -f '${Package}\n' -W $* >/dev/null
+	for i in $*; do
+		dpkg-query -f '${Status},${Package}\n' -W $* 2>/dev/null | grep -q "^install ok" 
+	done
 }
 
 # Check if dpkg dependency is met
 # $* - packages
 zaf_check_deps_rpm() {
-	 rpm --quiet -qi $*
+	for i in $*; do
+		rpm --quiet -qi $i | grep -q $i
+	done
 }
 
 # Check if dpkg dependency is met
@@ -124,7 +147,16 @@ zaf_check_deps_rpm() {
 zaf_check_deps_opkg() {
 	local p
 	for p in $*; do
-		opkg info $p | grep -q 'Package:' || { echo "Missing package $p" >&2; return 1; }
+		opkg info $p | grep -q 'Package:' || { return 1; }
+	done
+}
+
+# Check if pkg dependency is met
+# $* - packages
+zaf_check_deps_pkg() {
+	local p
+	for p in $*; do
+		pkg query -x "Package: %n" $p| grep -q 'Package:' || { return 1; }
 	done
 }
 

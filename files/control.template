@@ -1,0 +1,11 @@
+Package: zaf
+Version: {ZAF_VERSION}
+Homepage: https://github.com/limosek/zaf
+Section: admin
+Priority: optional
+Architecture: all
+Depends: dash, awk, sed, grep, coreutils {ZAF_DEPENDS}
+Maintainer: Lukas Macura <lukas@macura.cz>
+Description: Zabbix agent framework package
+ This tool is used to maintain external zabbix checks in one place. Primary goal is not to make all plugins available here but to be able to use any plugin and decentralized development. If you are maintainer of some external check, it is enough to create zaf file in your repo and use zaf installer everywhere.
+

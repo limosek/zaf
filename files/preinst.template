@@ -1,0 +1,10 @@
+#!/bin/sh
+
+case $1 in
+install)
+	if [ -d /usr/lib/zaf ]; then
+		echo "Do zaf self-remove first! Cannot mix packaged and non-packaged version!"
+		exit 2 
+	fi
+	;;
+esac
