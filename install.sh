@@ -25,7 +25,7 @@ zaf_download_files() {
 }
 
 if ! [ -f README.md ]; then
-	# We are runing from stdin	
+	# We are runing from stdin
 	if ! which curl >/dev/null;
 	then
 		zaf_err "Curl not found. Cannot continue. Please install it."
@@ -41,6 +41,8 @@ if ! type zaf_version >/dev/null; then
 . lib/zaf.lib.sh
 . lib/os.lib.sh
 . lib/ctrl.lib.sh 
+. lib/cache.lib.sh 
+. lib/zbxapi.lib.sh 
 fi
 
 # Read options as config for ZAF
@@ -305,7 +307,7 @@ zaf_postconfigure() {
 	else
 	    [ "${ZAF_GIT}" = 1 ] && [ -n  "${INSTALL_PREFIX}" ] && git clone "${ZAF_REPO_GITURL}" "${INSTALL_PREFIX}/${ZAF_REPO_DIR}"
         fi
-	zaf_wrn "Install done. Use 'zaf' to get started. Do not forget to do 'zaf upgrade' to upgrade plugins too!"
+	zaf_wrn "Install done. Use 'zaf' to get started."
 	true
 }
 

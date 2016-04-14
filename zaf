@@ -1,20 +1,29 @@
 #!/bin/sh
 
+if [ -z "$secondstage" ]; then
 ZAF_CFG_FILE="/etc/zaf.conf"
-if [ -f $ZAF_CFG_FILE ]; then
-	. $ZAF_CFG_FILE
-else
-	echo "Missing config file $ZAF_CFG_FILE! Exiting."
-	exit 2
-fi
+	if [ -f $ZAF_CFG_FILE ]; then
+		. $ZAF_CFG_FILE
+	else
+		echo "Missing config file $ZAF_CFG_FILE! Exiting."
+		exit 2
+	fi
 
-# Read options as config for ZAF
-for pair in "$@"; do
-    echo $pair | grep -q '^ZAF\_' || continue
-    option=$(echo $pair|cut -d '=' -f 1)
-    value=$(echo $pair|cut -d '=' -f 2-)
-    eval "${option}='$value'"
-done
+	# Read options as config for ZAF
+	for pair in "$@"; do
+    		if echo $pair | grep -qE '^ZAF\_(.*)='; then
+    			option=$(echo $pair|cut -d '=' -f 1)
+    			value=$(echo $pair|cut -d '=' -f 2-)
+    			eval "${option}='$value'"
+			export secondstage=1
+    		else
+			params="$params $pair"
+    		fi
+	done
+	export $(set |grep ^ZAF_ | cut -d '=' -f 1)
+	# If some variables in cmd were stripped, rerun only with right arguments and exported variables
+	[ -n "$secondstage" ] && exec $0 $params
+fi
 
 [ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
 ZAF_TMP_DIR="${ZAF_TMP_BASE}-${USER}"
@@ -54,25 +63,6 @@ if zaf_is_root; then
 	chmod g+w "${ZAF_CACHE_DIR}"
 fi
 
-zaf_shift(){
-	local s
-
-	if echo $1 |grep -q "="; then
-		if echo $2 |grep -q "="; then
-			if echo $3 |grep -q "="; then
-				s=3
-			else
-				s=2
-			fi
-		else
-			s=1
-		fi
-	else
-		s=0
-	fi
-	echo $s
-}
-
 case $1 in
 
 check-agent-config)
@@ -110,7 +100,6 @@ upgrade)
 	;;
 show)
 	shift;
-	shift $(zaf_shift "$@")
 	if [ -z "$1" ]; then
 		zaf_list_plugins | while read plugin; do
 			zaf_plugin_info $ZAF_PLUGINS_DIR/$plugin/control.zaf
@@ -135,7 +124,6 @@ plugins)
 
 items)
 	shift
-	shift $(zaf_shift "$@")
 	if [ -z "$1" ]; then
 		zaf_list_items
 	else
@@ -146,7 +134,6 @@ items)
 test)
 	[ "$USER" != "zabbix" ] && zaf_wrn "You are not zabbix user. Test will be run with your privileges and sudo access!"
 	shift
-	shift $(zaf_shift "$@")
 	if echo $1|grep -q '\.'; then
 		zaf_test_item "$1"
 		exit
@@ -166,7 +153,6 @@ test)
 	;;
 get)
 	shift
-	shift $(zaf_shift "$@")
 	if echo $1|grep -q '\.'; then
 		zaf_get_item "$1"
 		exit
@@ -186,7 +172,6 @@ get)
 
 precache)
 	shift
-	shift $(zaf_shift "$@")
 	for i in $*; do
 		if zaf_is_plugin $i; then
 			for j in $(zaf_list_plugin_items $i precache); do
@@ -204,7 +189,6 @@ precache)
 
 install)
 	shift
-	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 install plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$(basename $p)"; then
@@ -219,7 +203,6 @@ install)
 
 reinstall)
 	shift
-	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 reinstall plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
@@ -234,7 +217,6 @@ reinstall)
 
 remove)
 	shift
-	shift $(zaf_shift "$@")
 	[ -z "$1" ] && echo "$0 remove plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
@@ -247,7 +229,6 @@ remove)
 
 self-upgrade)
 	shift
-	shift $(zaf_shift "$@")
 	[ -z "$1" ] && auto=auto
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-upgrade."
 	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
@@ -261,7 +242,6 @@ self-upgrade)
 	
 self-remove)
 	shift
-	shift $(zaf_shift "$@")
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-remove."
 	. /etc/zaf.conf
 	if [ "$1" = "force" ]; then
@@ -294,11 +274,8 @@ api)
 		zaf_zbxapi_gethostsingroup $gid
 		;;
 	backup-group)
-	set -e
-		shift $(zaf_shift)
 		shift; shift
 		gid=$(zaf_zbxapi_gethostgroupid "$1")
-		shift $(zaf_shift)
 		shift
 		hosts=$(zaf_zbxapi_gethostsingroup $gid)
 		dir="."
@@ -314,7 +291,6 @@ api)
 		wait
 		;;
 	backup-host)
-		shift $(zaf_shift)
 		shift; shift
 		hostid=$(zaf_zbxapi_gethostid "$1")
 		zaf_wrn "Exporting host $3($hostid)..."
@@ -336,7 +312,7 @@ api)
 
 *)
 	echo "$0 Version ${ZAF_VERSION}. Please use some of this commands:"
-	echo "$0 Cmd [ZAF_OPTION=value] ..."
+	echo "$0 Cmd [ZAF_OPTION=value] [ZAF_CTRL_Option=value] ..."
 	echo "Commands:"
 	echo "$0 update			To update repo (not plugins, similar to apt-get update)"
 	echo "$0 upgrade		To upgrade installed plugins from repo" 

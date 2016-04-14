@@ -55,16 +55,32 @@ zaf_block_get_option() {
 # $1 - control file
 # $2 - option name
 zaf_ctrl_get_global_option() {
-	zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" \
-	|| zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
+	local ctrlopt
+
+	eval ctrlopt=\$ZAF_CTRL_$(echo $2| tr '-' '_')
+	if [ -n "$ctrlopt" ]; then
+		zaf_wrn "Overriding $2 from env"
+		echo $ctrlopt
+	else
+		zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" \
+		|| zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
+	fi
 }
 # Get item specific option (single or multiline)
 # $1 - control file
 # $2 - item name
 # $3 - option name
 zaf_ctrl_get_item_option() {
-	zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" \
-	|| zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
+	local ctrlopt
+
+	eval ctrlopt=\$ZAF_CTRL_$2_$(echo $3| tr '-' '_')
+	if [ -n "$ctrlopt" ]; then
+		zaf_wrn "Overriding item $2 option $3 from env"
+		echo $ctrlopt
+	else
+		zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" \
+		|| zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
+	fi
 }
 
 # Check dependencies based on control file
@@ -93,19 +109,21 @@ zaf_ctrl_sudo() {
 	local cmd
 	local parms
 
-	if ! which sudo >/dev/null; then
-		zaf_wrn "Sudo needed bud not installed?"
-	fi
 	pdir="$3"
 	plugin=$1
 	zaf_dbg "Installing sudoers entry $ZAF_SUDOERSD/zaf_$plugin"
 	sudo=$(zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}")
+	[ -z "$sudo" ] && return  # Nothing to install
+	if ! which sudo >/dev/null; then
+		zaf_wrn "Sudo needed bud not installed?"
+	fi
 	cmd=$(echo $sudo | cut -d ' ' -f 1)
 	parms=$(echo $sudo | cut -d ' ' -f 2-)
 	if which $cmd >/dev/null ; then
-		(echo "zabbix ALL=NOPASSWD:SETENV: $(which $cmd) $(echo $parms | tr '%' '*')";echo) >$ZAF_SUDOERSD/zaf_$plugin
+		(echo "zabbix ALL=NOPASSWD:SETENV: $(which $cmd) $(echo $parms | tr '%' '*')";echo) >$ZAF_SUDOERSD/zaf_$plugin || zaf_err "Error during zaf_ctrl_sudo"
+		chmod 0440 $ZAF_SUDOERSD/zaf_$plugin
 	else
-		zaf_wrn "Cannot find binary $cmd for sudo. Ignoring sudo."
+		zaf_err "Cannot find binary '$cmd' to put into sudoers."
 	fi
 }
 
@@ -116,14 +134,17 @@ zaf_ctrl_sudo() {
 zaf_ctrl_cron() {
 	local pdir
 	local plugin
+	local cron
 
 	pdir="$3"
 	plugin=$1
 	zaf_dbg "Installing cron entry $ZAF_CROND/zaf_$plugin"
-	zaf_ctrl_get_global_option $2 "Cron" | zaf_far '{PLUGINDIR}' "${plugindir}" >$ZAF_CROND/zaf_$plugin
+	cron=$(zaf_ctrl_get_global_option $2 "Cron")
+	[ -z "$cron" ] && return # Nothing to install
+	zaf_ctrl_get_global_option $2 "Cron" | zaf_far '{PLUGINDIR}' "${plugindir}" >$ZAF_CROND/zaf_$plugin || zaf_err "Error during zaf_ctrl_cron"
 }
 
-# Install sudo options from control
+# Install files defined to be installed in control to plugun directory
 # $1 pluginurl
 # $2 control
 # $3 plugindir
@@ -131,20 +152,27 @@ zaf_ctrl_install() {
 	local binaries
 	local pdir
 	local script
-	local cmd
+	local files
+	local f
+	local b
 
 	pdir="$3"
+	(set -e
 	binaries=$(zaf_ctrl_get_global_option $2 "Install-bin")
 	for b in $binaries; do
 		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
                 zaf_install_bin "${ZAF_TMP_DIR}/$b" "$pdir"
 	done
+	files=$(zaf_ctrl_get_global_option $2 "Install-files")
+	for f in $files; do
+		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
+                zaf_install "${ZAF_TMP_DIR}/$b" "$pdir"
+	done
 	script=$(zaf_ctrl_get_global_option $2 "Install-script")
 	[ -n "$script" ] && eval "$script"
-	cmd=$(zaf_ctrl_get_global_option $2 "Install-cmd")
-	[ -n "$cmd" ] && $cmd
+	true
+	) || zaf_err "Error during zaf_ctrl_install"
 }
-
 
 # Generates zabbix cfg from control file
 # $1 control
@@ -158,6 +186,7 @@ zaf_ctrl_generate_cfg() {
 	local cache
 
 	items=$(zaf_ctrl_get_items <"$1")
+	(set -e
 	for i in $items; do
             iscript=$(echo $i | tr -d '[]*&;:')
 	    params=$(zaf_ctrl_get_item_option $1 $i "Parameters")
@@ -199,6 +228,7 @@ zaf_ctrl_generate_cfg() {
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"
 	done
+	) || zaf_err "Error during zaf_ctrl_generate_cfg"
 }
 
 
