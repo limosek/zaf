@@ -237,21 +237,25 @@ zaf_zbxapi_gethostsingroup() {
  zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4
 }
 
-# Host backup
-# $1 hostid
-zaf_zbxapi_export_host(){
+# Object backup
+# $1 object
+# $2 id
+zaf_zbxapi_export_object(){
  local bkpstr
- local host
+ local obj
+ local id
  
- host="$1"
+ obj="$1"
+ id="$2"
+
  bkpstr='
  {
     "method": "configuration.export",
     "jsonrpc": "2.0",
     "params": {
         "options": {
-            "hosts": [
-                "'$host'"
+            "'$obj'": [
+                "'$id'"
             ]
         },
         "format": "xml"
@@ -260,44 +264,38 @@ zaf_zbxapi_export_host(){
     "id": 1
 }'
  zaf_zbxapi_do_cache "$bkpstr" | zaf_zbxapi_getxml
+}
+
+
+# Host backup
+# $1 hostid
+zaf_zbxapi_export_host(){
+ zaf_zbxapi_export_object hosts "$1"
 }
 
 # Template backup
 # $1 templateid
 zaf_zbxapi_export_template(){
- local bkpstr
- local host
- 
- host="$1"
- bkpstr='
- {
-    "method": "configuration.export",
-    "jsonrpc": "2.0",
-    "params": {
-        "options": {
-            "templates": [
-                "'$host'"
-            ]
-        },
-        "format": "xml"
-    },
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "id": 1
-}'
- zaf_zbxapi_do_cache "$bkpstr" | zaf_zbxapi_getxml
+ zaf_zbxapi_export_object templates "$1"
+}
+
+# Map backup
+# $1 mapid
+zaf_zbxapi_export_map(){
+ zaf_zbxapi_export_object maps "$1"
 }
 
 # Import template into zabbix
 # $1 template file or stdin
-zaf_zbxapi_import_template(){
- local tmplstr
+zaf_zbxapi_import_config(){
+ local xmlstr
  local impstr
 
  if [ -z "$1" ]; then
-   tmplstr=$(zaf_strescape '"')
+   xmlstr=$(zaf_strescape '"')
  else
    ! [ -f "$1" ] && return 1
-   tmplstr=$(zaf_strescape '"\n\r' <$1)
+   xmlstr=$(zaf_strescape '"\n\r' <$1)
  fi
  impstr='
  {
@@ -306,22 +304,56 @@ zaf_zbxapi_import_template(){
     "params": {
         "format": "xml",
         "rules": {
+	    "applications": {
+                "createMissing": true,
+                "updateExisting": true
+            },
+            "discoveryRules": {
+                "createMissing": true,
+                "updateExisting": true
+            },
+	    "graphs": {
+                "createMissing": true,
+                "updateExisting": true
+            },
             "hosts": {
                 "createMissing": true,
                 "updateExisting": true
             },
             "items": {
                 "createMissing": true,
-                "updateExisting": true,
-                "deleteMissing": true
+                "updateExisting": true
+            },
+	    "templates": {
+                "createMissing": true,
+                "updateExisting": true
+            },
+            "triggers": {
+                "createMissing": true,
+                "updateExisting": true
+            },
+	    "maps": {
+                "createMissing": true,
+                "updateExisting": true
+            },
+	    "screens": {
+                "createMissing": true,
+                "updateExisting": true
+            },
+            "items": {
+                "createMissing": true,
+                "updateExisting": true
+            },
+	    "valueMaps": {
+                "createMissing": true,
+                "updateExisting": true
             }
         },
-	"source": "'$tmplstr'"
+	"source": "'$xmlstr'"
     },
     "auth": "'$ZAF_ZBXAPI_AUTH'",
     "id": 3
 }'
-	echo "$impstr";exit
  zaf_zbxapi_do "$impstr" | zaf_zbxapi_getresult | grep -q true
 }
 
