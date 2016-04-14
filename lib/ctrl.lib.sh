@@ -55,11 +55,13 @@ zaf_block_get_option() {
 # $1 - control file
 # $2 - option name
 zaf_ctrl_get_global_option() {
+	local ctrlvar
 	local ctrlopt
 
-	eval ctrlopt=\$ZAF_CTRL_$(echo $2| tr '-' '_')
-	if [ -n "$ctrlopt" ]; then
-		zaf_wrn "Overriding $2 from env"
+	ctrlopt="ZAF_CTRL_$(zaf_stripctrl $2)"
+	eval ctrlvar=\$$ctrlopt
+	if [ -n "$ctrlvar" ]; then
+		zaf_dbg "Overriding control field $2 from env $ctrlopt($ctrlvar)"
 		echo $ctrlopt
 	else
 		zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" \
@@ -71,11 +73,13 @@ zaf_ctrl_get_global_option() {
 # $2 - item name
 # $3 - option name
 zaf_ctrl_get_item_option() {
+	local ctrlvar
 	local ctrlopt
 
-	eval ctrlopt=\$ZAF_CTRL_$2_$(echo $3| tr '-' '_')
-	if [ -n "$ctrlopt" ]; then
-		zaf_wrn "Overriding item $2 option $3 from env"
+	ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
+	eval ctrlvar=\$$ctrlopt
+	if [ -n "$ctrlvar" ]; then
+		zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
 		echo $ctrlopt
 	else
 		zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" \
@@ -188,7 +192,7 @@ zaf_ctrl_generate_cfg() {
 	items=$(zaf_ctrl_get_items <"$1")
 	(set -e
 	for i in $items; do
-            iscript=$(echo $i | tr -d '[]*&;:')
+            iscript=$(zaf_stripctrl $i)
 	    params=$(zaf_ctrl_get_item_option $1 $i "Parameters")
 	    if [ -n "$params" ]; then
 		ikey="$2.$i[*]"

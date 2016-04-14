@@ -1,7 +1,7 @@
 
 # Hardcoded variables
 ZAF_VERSION="1.1"
-ZAF_GITBRANCH="master"
+ZAF_GITBRANCH="1.1"
 ZAF_URL="https://github.com/limosek/zaf"
 ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 
@@ -425,4 +425,10 @@ zaf_tolower() {
 zaf_toupper() {
 	tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 }
+
+# Return simplified key with discarded special chars.
+zaf_stripctrl() {
+	echo $1 | tr '[]*&;:.-' '________'
+}
+
 
