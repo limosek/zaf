@@ -236,7 +236,7 @@ self-upgrade)
 	then
 		zaf_err "Curl not found. Cannot continue. Please install it."
 	fi
-	zaf_fetch_url $ZAF_RAW_URL/$ZAF_VERSION/install.sh | exec sh -s $auto "$@"
+	zaf_fetch_url $ZAF_RAW_URL/$ZAF_GITBRANCH/install.sh | exec sh -s $auto "$@"
 	exit
 	;;
 	
