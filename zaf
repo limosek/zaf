@@ -270,12 +270,12 @@ api)
 		zaf_zbxapi_gethostgroupid "$3"
 		;;	
 	hosts)
-		gid=$(zaf_zbxapi_gethostgroupid "$3")
+		gid=$(zaf_zbxapi_gethostgroupid "$3") || exit 1
 		zaf_zbxapi_gethostsingroup $gid
 		;;
-	backup-group)
+	export-hosts-in-group)
 		shift; shift
-		gid=$(zaf_zbxapi_gethostgroupid "$1")
+		gid=$(zaf_zbxapi_gethostgroupid "$1") || exit 1
 		shift
 		hosts=$(zaf_zbxapi_gethostsingroup $gid)
 		dir="."
@@ -283,18 +283,78 @@ api)
 		zaf_wrn "Will backup this hosts: $hosts"
 		zaf_wrn "Output dir: $dir"
 		for h in $hosts; do
-			zaf_bglimit 5
-			(hn=$(zaf_zbxapi_gethost $h)
-			zaf_wrn "Exporting host $hn($h)..."
-			zaf_zbxapi_backuphost $h >$dir/$hn.xml )
+			if zaf_bglimit 5; then
+				(
+				hn=$(zaf_zbxapi_gethost $h)
+				zaf_wrn "Exporting host $hn($h)..."
+				zaf_zbxapi_export_host $h >"$dir/$hn.xml"
+				) &
+			else
+				hn=$(zaf_zbxapi_gethost $h)
+				zaf_wrn "Exporting host $hn($h)..."
+				zaf_zbxapi_export_host $h >"$dir/$hn.xml"
+			fi
 		done
 		wait
 		;;
-	backup-host)
+	export-host)
 		shift; shift
-		hostid=$(zaf_zbxapi_gethostid "$1")
+		hostid=$(zaf_zbxapi_gethostid "$1") || exit 1
 		zaf_wrn "Exporting host $3($hostid)..."
-		zaf_zbxapi_backuphost $hostid
+		zaf_zbxapi_export_host $hostid
+		;;
+	export-template)
+		shift; shift
+		templateid=$(zaf_zbxapi_gettemplateid "$1") || exit 1
+		zaf_wrn "Exporting template $3($hostid)..."
+		zaf_zbxapi_export_template $templateid
+		;;
+	export-templates)
+		shift; shift
+		dir="."
+		[ -n "$1" ] && dir="$1"
+		templates=$(zaf_zbxapi_gettemplateid)
+		zaf_wrn "Will backup this templates: $templates"
+		zaf_wrn "Output dir: $dir"
+		for t in $templates; do
+			if zaf_bglimit 5; then
+				(
+				tn=$(zaf_zbxapi_gettemplate $t)
+				zaf_wrn "Exporting template $tn($t)..."
+				zaf_zbxapi_export_template $t >"$dir/$tn.xml"
+				) &
+			else
+				tn=$(zaf_zbxapi_gettemplate $t)
+				zaf_wrn "Exporting template $tn($t)..."
+				zaf_zbxapi_export_template $t >"$dir/$tn.xml"
+			fi
+		done
+		wait
+		;;
+	import-template)
+		shift; shift
+		if zaf_is_plugin $1; then
+			if [ -f "$ZAF_PLUGINS_DIR/$1/template.xml" ]; then
+				template="$ZAF_PLUGINS_DIR/$1/template.xml"
+				zaf_wrn "Importing template $template"
+				zaf_zbxapi_import_template $template || zaf_err "Error importing template"
+			else
+				url="$(zaf_plugin_option $1 Template)"
+				if [ -n "$url" ]; then
+					zaf_fetch_url $url | zaf_zbxapi_import_template || zaf_err "Error importing template"
+				else
+					url="$(zaf_plugin_option $1 Url)"
+					zaf_fetch_url $url/template.xml | zaf_zbxapi_import_template || zaf_err "Error importing template"
+				fi
+			fi
+		else
+			if [ -f $1 ]; then
+				zaf_wrn "Importing template $1"
+				zaf_zbxapi_import_template $1 || zaf_err "Error importing template"
+			else
+				zaf_err "Unknown plugin $1!"
+			fi
+		fi
 		;;
 	*)
 		echo "$0 api command [parameters]"
@@ -302,8 +362,11 @@ api)
 		echo "host 'hostid'			Get hostname from hostid"
 		echo "hostgroupid 'hostgroup'		Get hostgroup id from hostgroup"
 		echo "hosts 'hostgroup'			Get hosts in group"
-		echo "backup-group 'hostgroup' [dir]	Backup all hosts in group (get their config from zabbix and save to dir/hostname.xml)" 
-		echo "backup-host 'host'		Backup host (get config from zabbix to stdout)"
+		echo "export-hosts-in-group 'hostgroup' [dir]	Backup all hosts in group (get their config from zabbix and save to dir/hostname.xml)" 
+		echo "export-host 'host'		Backup host (get config from zabbix to stdout)"
+		echo "import-template {plugin|file}	Import template for plugin or from file"
+		echo "export-template 'name'		Export template to stdout"
+		echo "export-templates 	[dir]		Export all template to dir"
 		echo
 		exit
 		;;

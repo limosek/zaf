@@ -78,6 +78,7 @@ zaf_bglimit(){
     local maxbg
     local maxnumber
     local cnumber
+    [ -z "$BASH_VERSION" ] && { zaf_dbg "Job server not available. Use bash!"; return 1; }
     if [ $# -eq 0 ] ; then
             maxbg=5
     else
@@ -429,6 +430,19 @@ zaf_toupper() {
 # Return simplified key with discarded special chars.
 zaf_stripctrl() {
 	echo $1 | tr '[]*&;:.-' '________'
+}
+
+# Unescape string on stdin
+# $1 - list of chars to unescape
+zaf_strunescape() {
+	 sed -e 's#\\\(['"$1"']\)#\1#g'
+}
+
+
+# Escape string on stdin
+# $1 - list of chars to escape
+zaf_strescape() {
+	 sed -e 's#\(['"$1"']\)#\\\1#g'
 }
 
 

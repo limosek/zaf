@@ -1,16 +1,25 @@
-# Call api function 
+
+# Call api function and use cache
 # $1 - query string
 zaf_zbxapi_do() {
 	local result
+	zaf_trc "Zabbix API: $1"
+	result=$(curl -s -f -L -X POST -H 'Content-Type: application/json-rpc' -d "$1" "$ZAF_ZBXAPI_URL")
+	if [ $? = 0 ] && echo $result | grep -q '"result":'; then
+		zaf_trc "API OK"
+		echo $result
+	else
+		zaf_err "Error processing API request. ($?,$result)"
+	fi
+}
+# Call api function and cache results 
+# $1 - query string
+zaf_zbxapi_do_cache() {
+	local result
 	if ! zaf_fromcache "$1"; then
-		zaf_trc "Zabbix API: $1"
-		result=$(curl -s -f -L -X POST -H 'Content-Type: application/json-rpc' -d "$1" "$ZAF_ZBXAPI_URL")
-		if [ $? = 0 ] && echo $result | grep -q '"result":'; then
-			zaf_tocache "$1" "$result" 60		
-			echo $result
-		else
-			zaf_err "Error processing API request. ($?,$result)"
-		fi
+		result=$(zaf_zbxapi_do "$1")
+		[ -n "$result" ] && zaf_tocache "$1" "$result" 60
+		echo $result
 	fi
 }
 
@@ -21,7 +30,7 @@ zaf_zbxapi_getresult() {
 
 # Extract XML result from JSON response
 zaf_zbxapi_getxml() {
-	zaf_zbxapi_getresult | sed -e 's/{"jsonrpc":"2.0","result":"//' | sed -e 's/","id"\:1}//' | sed -e 's#\\\([<">/]\)#\1#g'
+	zaf_zbxapi_getresult | sed -e 's/{"jsonrpc":"2.0","result":"//' | sed -e 's/","id"\:1}//' | zaf_zbxapi_getstring | zaf_strunescape '<">/'
 }
 
 # Extract string from JSON response result
@@ -58,8 +67,9 @@ zaf_zbxapi_login(){
  if [ "$ZAF_ZBXAPI_AUTHTYPE" = "http" ] ; then
     ZAF_ZBXAPI_URL=$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 1)//$ZAF_ZBXAPI_USER:$ZAF_ZBXAPI_PASS@$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 3-)
  fi
- result=$(zaf_zbxapi_do "$authstr")
+ result=$(zaf_zbxapi_do_cache "$authstr")
  ZAF_ZBXAPI_AUTH=$(echo $result |zaf_zbxapi_getresult| zaf_zbxapi_getstring)
+ [ -z "$ZAF_ZBXAPI_AUTH" ] && zaf_err "Cannot login into API"
  zaf_dbg "Logged into zabbix API ($ZAF_ZBXAPI_AUTH)"
 }
 
@@ -68,6 +78,7 @@ zaf_zbxapi_gethostgroupid() {
  local hstr
  local filter
  local gfilter
+ local result
  
  hstr='{
     "method": "hostgroup.get",
@@ -81,7 +92,9 @@ zaf_zbxapi_gethostgroupid() {
     },
     "id": 1
  }'
- zaf_zbxapi_do "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4
+ result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4)
+ [ -z "$result" ] && zaf_err "HostGroup $1 not found!"
+ echo $result
 }
 
 # $1 hostname
@@ -91,6 +104,7 @@ zaf_zbxapi_gethostid() {
  local groupid
  local filter
  local gfilter
+ local result
  
  host="$1"
  if [ -n "$host" ] ; then
@@ -106,7 +120,37 @@ zaf_zbxapi_gethostid() {
     },
     "id": 1
  }'
- zaf_zbxapi_do "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4
+ result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4)
+ [ -z "$result" ] && zaf_err "Host $1 not found!"
+ echo $result
+}
+
+# $1 hostname
+zaf_zbxapi_gettemplateid() {
+ local hstr
+ local host
+ local groupid
+ local filter
+ local gfilter
+ local result
+ 
+ host="$1"
+ if [ -n "$host" ] ; then
+   filter='"filter": { "host": [ "'$host'" ] },'
+ fi
+ hstr='{
+    "method": "template.get",
+    "jsonrpc": "2.0",
+    "auth": "'$ZAF_ZBXAPI_AUTH'",
+    "params": {
+	'$filter'
+	"output": "shorten"
+    },
+    "id": 1
+ }'
+ result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4)
+ [ -z "$result" ] && zaf_err "Template $1 not found!"
+ echo $result
 }
 
 # $1 hostid
@@ -116,6 +160,7 @@ zaf_zbxapi_gethost() {
  local groupid
  local filter
  local gfilter
+ local result
  
  hostid="$1"
  if [ -n "$hostid" ] ; then
@@ -131,8 +176,39 @@ zaf_zbxapi_gethost() {
     },
     "id": 1
  }'
- zaf_zbxapi_do "$hstr" | zaf_zbxapi_getresult | zaf_zbxapi_getvalue host
+ result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | zaf_zbxapi_getvalue host)
+ [ -z "$result" ] && zaf_err "Hostid $1 not found!"
+ echo $result
 }
+
+# $1 templateid
+zaf_zbxapi_gettemplate() {
+ local hstr
+ local host
+ local groupid
+ local filter
+ local gfilter
+ local result
+ 
+ hostid="$1"
+ if [ -n "$hostid" ] ; then
+   filter='"templateids": [ "'$hostid'" ],'
+ fi
+ hstr='{
+    "method": "template.get",
+    "jsonrpc": "2.0",
+    "auth": "'$ZAF_ZBXAPI_AUTH'",
+    "params": {
+	'$filter'
+	"output": "extend"
+    },
+    "id": 1
+ }'
+ result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | zaf_zbxapi_getvalue host)
+ [ -z "$result" ] && zaf_err "Templateid $1 not found!"
+ echo $result
+}
+
 
 # $1 hostgroupid
 zaf_zbxapi_gethostsingroup() {
@@ -158,13 +234,14 @@ zaf_zbxapi_gethostsingroup() {
     },
     "id": 1
  }'
- zaf_zbxapi_do "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4
+ zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4
 }
 
 # Host backup
 # $1 hostid
-zaf_zbxapi_backuphost(){
+zaf_zbxapi_export_host(){
  local bkpstr
+ local host
  
  host="$1"
  bkpstr='
@@ -182,7 +259,70 @@ zaf_zbxapi_backuphost(){
     "auth": "'$ZAF_ZBXAPI_AUTH'",
     "id": 1
 }'
- zaf_zbxapi_do "$bkpstr" | zaf_zbxapi_getxml
+ zaf_zbxapi_do_cache "$bkpstr" | zaf_zbxapi_getxml
+}
+
+# Template backup
+# $1 templateid
+zaf_zbxapi_export_template(){
+ local bkpstr
+ local host
+ 
+ host="$1"
+ bkpstr='
+ {
+    "method": "configuration.export",
+    "jsonrpc": "2.0",
+    "params": {
+        "options": {
+            "templates": [
+                "'$host'"
+            ]
+        },
+        "format": "xml"
+    },
+    "auth": "'$ZAF_ZBXAPI_AUTH'",
+    "id": 1
+}'
+ zaf_zbxapi_do_cache "$bkpstr" | zaf_zbxapi_getxml
+}
+
+# Import template into zabbix
+# $1 template file or stdin
+zaf_zbxapi_import_template(){
+ local tmplstr
+ local impstr
+
+ if [ -z "$1" ]; then
+   tmplstr=$(zaf_strescape '"')
+ else
+   ! [ -f "$1" ] && return 1
+   tmplstr=$(zaf_strescape '"\n\r' <$1)
+ fi
+ impstr='
+ {
+    "method": "configuration.import",
+    "jsonrpc": "2.0",
+    "params": {
+        "format": "xml",
+        "rules": {
+            "hosts": {
+                "createMissing": true,
+                "updateExisting": true
+            },
+            "items": {
+                "createMissing": true,
+                "updateExisting": true,
+                "deleteMissing": true
+            }
+        },
+	"source": "'$tmplstr'"
+    },
+    "auth": "'$ZAF_ZBXAPI_AUTH'",
+    "id": 3
+}'
+	echo "$impstr";exit
+ zaf_zbxapi_do "$impstr" | zaf_zbxapi_getresult | grep -q true
 }
 
 
