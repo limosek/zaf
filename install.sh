@@ -6,7 +6,7 @@ if [ -z "$ZAF_URL" ]; then
 	ZAF_URL="https://github.com/limosek/zaf/"
 fi
 
-[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=master
+[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=1.1
 
 # Lite version of zaf_fetch_url, full version will be loaded later
 zaf_fetch_url(){
@@ -179,7 +179,7 @@ zaf_configure_agent() {
 		else
 			zaf_unset_agent_option "$option"
 		fi
-		options="$options Z_$option='$value'"
+		options="$options Z_$option=$value"
 	done
 	zaf_set_option ZAF_AGENT_OPTIONS "${options}"
 }

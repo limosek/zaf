@@ -268,13 +268,17 @@ zaf_install_plugin() {
 	local plugin
 	local plugindir
 	local control
+	local version
 
 	if zaf_prepare_plugin "$1" "${ZAF_TMP_DIR}/plugin"; then
 		url=$(zaf_get_plugin_url "$1")
-                plugin=$(zaf_ctrl_get_global_block <"${ZAF_TMP_DIR}/plugin/control.zaf" | zaf_block_get_option Plugin)
+		control="${ZAF_TMP_DIR}/plugin/control.zaf"
+                plugin=$(zaf_ctrl_get_global_option $control Plugin)
+		version=$(zaf_ctrl_get_global_option $control Version)
 		plugindir="${ZAF_PLUGINS_DIR}"/$plugin
 		if [ -n "$plugin" ] && zaf_prepare_plugin "$1" $plugindir; then
-			zaf_wrn "Installing plugin $plugin from $url to $plugindir"
+			zaf_wrn "Installing plugin $plugin version $version"
+			zaf_dbg "Source url: $url, Destination dir: $plugindir"
 			control=${plugindir}/control.zaf
 			[ "$ZAF_DEBUG" -gt 1 ] && zaf_plugin_info "${control}"
 			zaf_ctrl_check_deps "${control}"
@@ -414,7 +418,7 @@ zaf_precache_item() {
 
 zaf_remove_plugin() {
 	! zaf_is_plugin $1 && { zaf_err "Plugin $1 not installed!"; }
-	zaf_wrn "Removing plugin $1"
+	zaf_wrn "Removing plugin $1 (version $(zaf_plugin_version $1))"
 	rm -rf ${ZAF_PLUGINS_DIR}/$1
 	rm -f ${ZAF_AGENT_CONFIGD}/zaf_$1.conf ${ZAF_CROND}/zaf_$1 ${ZAF_SUDOERSD}/zaf_$1
 }
@@ -444,5 +448,4 @@ zaf_strunescape() {
 zaf_strescape() {
 	 sed -e 's#\(['"$1"']\)#\\\1#g'
 }
-
 

@@ -25,18 +25,18 @@ So zaf is here for you :)
 ## Installing Zaf
 You need to be root and you must have curl installed on your system. Depending on your system, github certificates may not be available so you have to use *-k* option for curl (insecure). Default installation type is silent. So there will be no questions and everything will be autodetected. This simple command should be used on most systems:
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
+curl -k https://raw.githubusercontent.com/limosek/zaf/1.1/install.sh | sh
 ```
 
 ### Install options and autoconfiguration
 General parameters for install.sh on any system (simplest way how to install)
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | \
+curl -k https://raw.githubusercontent.com/limosek/zaf/1.1/install.sh | \
    sh -s {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Zaf-Options]
 ```
 or use git version:
 ```
-git clone https://github.com/limosek/zaf.git; cd zaf; git checkout master
+git clone https://github.com/limosek/zaf.git; cd zaf; git checkout 1.1
 ./install.sh {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Zaf-Options]
  Agent-Options: Z_Option=value [...]
  Zaf-Options: ZAF_OPT=value [...]
@@ -67,7 +67,7 @@ Now everything was tested on Debian and OpenWrt. If somebody is interrested in, 
 Suppose you want to autoinstall agent on clean system. You need only curl installed. Everything else is one-cmd process.
 This command will install zaf, install zabbix-agent if necessary and sets zabbix variables on agent to reach server. This command can be automatized by puppet or another deploying system.
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s auto \
+curl -k https://raw.githubusercontent.com/limosek/zaf/1.1/install.sh | sh -s auto \
   Z_Server=zabbix.server.local \
   Z_ServerActive=zabbix.server.local \
   Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 \
@@ -79,7 +79,7 @@ You can make your own deb package with preconfigured option. It is up to you to 
 ```
 git clone https://github.com/limosek/zaf.git \
  && cd zaf \
- && git checkout master \
+ && git checkout 1.1 \
  && git clone https://github.com/limosek/zaf-plugins.git \
  && make deb PLUGINS="./zaf-plugins/fsx" IPLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
 sudo dpkg -i out/zaf-1.2master.deb
@@ -123,19 +123,26 @@ During plugin installation, zaf will check all dependencies, do install binaries
 ## Zaf utility
 Zaf binary can be installed on any system from openwrt to big system. It has minimal dependencies and is shell based. Is has minimal size (up to 50kb of code). It can be used for installing, removing and testing zaf plugin items. Zaf should be run as root.
 ```
-zaf
-zaf Version 1.2master. Please use some of this commands:
-zaf update			To update repo
-zaf plugins			To list installed plugins
-zaf show [plugin]		To show installed plugins or plugin info
-zaf items [plugin]		To list all suported items [for plugin]
-zaf test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]
-zaf get [plugin[.item]]		To test [all] suported items by zabbix_get [for plugin]
-zaf install plugin		To install plugin
-zaf remove plugin		To remove plugin
-zaf self-upgrade		To self-upgrade zaf
-zaf self-remove			To self-remove zaf and its config
-
+./zaf 
+./zaf Version 1.2. Please use some of this commands:
+./zaf Cmd [ZAF_OPTION=value] [ZAF_CTRL_Option=value] [ZAF_CTRLI_Item_Option=value] ...
+Commands:
+./zaf update			To update repo (not plugins, similar to apt-get update)
+./zaf upgrade		To upgrade installed plugins from repo
+./zaf plugins		To list installed plugins
+./zaf show [plugin]		To show installed plugins or plugin info
+./zaf items [plugin]		To list all suported items [for plugin]
+./zaf test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]
+./zaf get [plugin[.item]]	To test [all] suported items by zabbix_get [for plugin]
+./zaf precache [plugin[.item]]	To precache [all] suported items
+./zaf install plugin		To install plugin
+./zaf remove plugin		To remove plugin
+./zaf api			To zabbix API functions. See ./zaf api for more info.
+./zaf userparms		See userparms generated from zaf on stdout
+./zaf agent-config		Reconfigure zabbix userparms in /etc/zabbix/zabbix_agentd.d
+./zaf self-upgrade		To self-upgrade zaf
+./zaf self-remove		To self-remove zaf and its config
+./zaf cache-clean		To remove all entries from cache
 ```
 
 ### Installing plugin
