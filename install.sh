@@ -179,7 +179,7 @@ zaf_configure_agent() {
 		else
 			zaf_unset_agent_option "$option"
 		fi
-		options="$options Z_$option='$value'"
+		options="$options Z_$option=$value"
 	done
 	zaf_set_option ZAF_AGENT_OPTIONS "${options}"
 }
