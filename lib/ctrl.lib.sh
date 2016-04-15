@@ -218,16 +218,13 @@ zaf_ctrl_generate_cfg() {
                 $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock$cmd";
                 continue
             fi
-            cmd=$(zaf_ctrl_get_item_option $1 $i "Function")
-            if [ -n "$cmd" ]; then
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock$cmd";
-                continue;
-            fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
             if [ -n "$cmd" ]; then
-                zaf_ctrl_get_item_option $1 $i "Script" >${ZAF_TMP_DIR}/${iscript}.sh;
+                zaf_ctrl_get_item_option $1 $i "Script" | \
+		  zaf_far '{INCLUDES}' '. /etc/zaf.conf; . ${ZAF_LIB_DIR}/zaf.lib.sh; . ${ZAF_LIB_DIR}/ctrl.lib.sh; . ${ZAF_LIB_DIR}/zbxapi.lib.sh; . ${ZAF_LIB_DIR}/cache.lib.sh; ' \
+		  >${ZAF_TMP_DIR}/${iscript}.sh;
                 zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args";
+                $(which echo) "UserParameter=$ikey,$cache $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args";
                 continue;
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"

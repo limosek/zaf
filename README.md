@@ -145,6 +145,20 @@ Commands:
 ./zaf cache-clean		To remove all entries from cache
 ```
 
+Zaf can even communicate with zabbix server using its API.  If you set ZAF_ZBXAPI_URL, ZAF_ZBXAPI_USER and ZAF_ZBXAPI_PASS in /etc/zaf.conf, you can use it:
+```
+./zaf api command [parameters]
+hostid 'host'			Get hostid from hostname
+host 'hostid'			Get hostname from hostid
+hostgroupid 'hostgroup'		Get hostgroup id from hostgroup
+hosts 'hostgroup'		Get hosts in group
+export-hosts dir [hostgroup]	Backup all hosts [in group] (get their config from zabbix and save to dir/hostname.xml)
+export-host 'host'		Backup host (get config from zabbix to stdout)
+import-template {plugin|file}	Import template for plugin or from file
+export-template 'name'		Export template to stdout
+export-templates dir		Export all template to dir
+```
+
 ### Installing plugin
 To install plugin from common repository. If git is available, local git repo is tried first. If not, remote https repo is tried second.
 ```
