@@ -116,6 +116,20 @@ zaf_zbxapi_gethostgroupid() {
  	echo $result |zaf_zbxapi_getvalue groupid
 }
 
+# $1 hostid
+# $2 property or null for all
+zaf_zbxapi_gethost() {
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "host" '' '"hostids": ["'$1'"]' 'extend')
+ 	[ -z "$result" ] && zaf_err "Hostid $1 not found!"
+ 	if [ -z "$2" ]; then
+ 		echo $result
+	else
+		echo $result |zaf_zbxapi_getvalue $2
+	fi
+}
+
 # $1 hostname
 zaf_zbxapi_gethostid() {
 	local result
@@ -123,6 +137,20 @@ zaf_zbxapi_gethostid() {
  	result=$(zaf_zbxapi_get_object "host" '"host": ["'$1'"]')
  	[ -z "$result" ] && zaf_err "Host $1 not found!"
  	echo $result |zaf_zbxapi_getvalue hostid
+}
+
+# $1 hostname
+# $2 inv field or empty for json
+zaf_zbxapi_gethostinventory() {
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "host" '"host": ["'$1'"]' '"withInventory": "true", "selectInventory": "extend"')
+ 	[ -z "$result" ] && zaf_err "Host $1 not found!"
+	if [ -z "$2" ]; then
+ 		echo $result 
+	else
+		echo $result |zaf_zbxapi_getvalue $2
+	fi
 }
 
 # $1 hostname
@@ -134,22 +162,18 @@ zaf_zbxapi_gettemplateid() {
  	echo $result |zaf_zbxapi_getvalue templateid
 }
 
-# $1 hostid
-zaf_zbxapi_gethost() {
-	local result
-
- 	result=$(zaf_zbxapi_get_object "host" '' '"hostids": ["'$1'"]' 'extend')
- 	[ -z "$result" ] && zaf_err "Hostid $1 not found!"
- 	echo $result | zaf_zbxapi_getvalue "host"
-}
-
 # $1 templateid
+# $2 property or null for all
 zaf_zbxapi_gettemplate() {
 	local result
 
  	result=$(zaf_zbxapi_get_object "template" '' '"templateids": ["'$1'"]' 'extend')
  	[ -z "$result" ] && zaf_err "Templateid $1 not found!"
- 	echo $result 
+ 	if [ -z "$2" ]; then
+ 		echo $result
+	else
+		echo $result |zaf_zbxapi_getvalue $2
+	fi
 }
 
 # $1 hostgroupid 
@@ -200,12 +224,17 @@ zaf_zbxapi_getmapid() {
 }
 
 # $1 mapid
+# $2 property or null for all
 zaf_zbxapi_getmap() {
 	local result
 
  	result=$(zaf_zbxapi_get_object "map" '' '"sysmapids": ["'$1'"]' 'extend')
  	[ -z "$result" ] && zaf_err "Mapid $1 not found"
- 	echo $result | zaf_zbxapi_getvalue "name"
+ 	if [ -z "$2" ]; then
+ 		echo $result
+	else
+		echo $result |zaf_zbxapi_getvalue $2
+	fi
 }
 
 # Object backup

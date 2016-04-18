@@ -260,17 +260,17 @@ self-remove)
 api)
 	zaf_zbxapi_login
 	case $2 in
-	*-id)
- 		obj=$(echo $2|cut -d '-' -f 1)
+	get-*-id)
+ 		obj=$(echo $2|cut -d '-' -f 2)
 		[ -z "$3" ] && zaf_err "$0 $1 $2 <$obj>"
 		eval zaf_zbxapi_get${obj}id "$3"
 		;;
-	id-*)
-		obj=$(echo $2|cut -d '-' -f 2)
+	get-byid-*|get-id-*)
+		obj=$(echo $2|cut -d '-' -f 3)
 		[ -z "$3" ] && zaf_err "$0 $1 $2 <id>"
-		eval zaf_zbxapi_get${obj} "$3"
+		eval zaf_zbxapi_get${obj} "$3" "$4"
 		;;
-	host-ids)
+	get-host-ids)
 		if [ -n "$3" ]; then
 			gid=$(zaf_zbxapi_gethostgroupid "$3") || exit 1
 			zaf_dbg "Selecting all hosts in group $3($gid)"
@@ -280,7 +280,11 @@ api)
 			zaf_zbxapi_gethostids
 		fi
 		;;
-	template-ids)
+	get-inventory)
+		[ -z "$3" ] && zaf_err "$0 $1 <host> [field]"
+		zaf_zbxapi_gethostinventory $3 $4
+		;;
+	get-template-ids)
 		if [ -n "$3" ]; then
 			gid=$(zaf_zbxapi_gethostgroupid "$3") || exit 1
 			zaf_dbg "Selecting all templates in group $3($gid)"
@@ -290,7 +294,7 @@ api)
 			zaf_zbxapi_gettemplateids
 		fi
 		;;
-	map-ids)
+	get-map-ids)
 		zaf_zbxapi_getmapid
 		;;
 	export-hosts)
@@ -384,10 +388,10 @@ api)
 	*)
 		echo "$0 api command [parameters]"
 		for i in host template map; do
-			zaf_hlp "${i}-id $i" "Get $i id"
-			zaf_hlp "id-${i} id" "Get $i name from id" 
+			zaf_hlp "get-${i}-id $i" "Get $i id"
+			zaf_hlp "get-byid-${i} id [property]" "Get $i property from id. Leave empty property for JSON" 
 		done
-		zaf_hlp "hosts hostgroup" "Get hosts in group"
+		zaf_hlp "get-inventory host [fields]"	"Get inventory fields [or all fields]" 
 		zaf_hlp "export-hosts dir [hg]"	"Backup all hosts [in group hg] (get their config from zabbix and save to dir/hostname.xml)" 
 		zaf_hlp "export-host host" "Backup host (get config from zabbix to stdout)"
 		zaf_hlp "import-template {plugin|file}"	"Import template for plugin or from file"
