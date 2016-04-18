@@ -156,7 +156,7 @@ Zaf related commands:
 ./zaf self-upgrade                      To self-upgrade zaf                                                             
 ./zaf self-remove                       To self-remove zaf and its config                                               
 ./zaf cache-clean                       To remove all entries from cache                                                
-
+```
 
 Zaf can even communicate with zabbix server using its API.  If you set ZAF_ZBXAPI_URL, ZAF_ZBXAPI_USER and ZAF_ZBXAPI_PASS in /etc/zaf.conf, you can use it:
 ```
