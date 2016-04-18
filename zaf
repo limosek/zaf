@@ -307,19 +307,19 @@ api)
 			shift
 			hosts=$(zaf_zbxapi_gethostsingroup $gid)
 		else
-			hosts=$(zaf_zbxapi_gethostid)
+			hosts=$(zaf_zbxapi_gethostids)
 		fi
 		zaf_wrn "Will backup this hosts: $hosts"
 		zaf_wrn "Output dir: $dir"
 		for h in $hosts; do
 			if zaf_bglimit 5; then
 				(
-				hn=$(zaf_zbxapi_gethost $h)
+				hn=$(zaf_zbxapi_gethost $h name)
 				zaf_wrn "Exporting host $hn($h)..."
 				zaf_zbxapi_export_host $h >"$dir/$hn.xml"
 				) &
 			else
-				hn=$(zaf_zbxapi_gethost $h)
+				hn=$(zaf_zbxapi_gethost $h name)
 				zaf_wrn "Exporting host $hn($h)..."
 				zaf_zbxapi_export_host $h >"$dir/$hn.xml"
 			fi
@@ -342,18 +342,18 @@ api)
 		shift; shift
 		[ -z "$1" ] && zaf_err "$0 api export-templates dir"
 		dir="$1"
-		templates=$(zaf_zbxapi_gettemplateid)
+		templates=$(zaf_zbxapi_gettemplateids)
 		zaf_wrn "Will backup this templates: $templates"
 		zaf_wrn "Output dir: $dir"
 		for t in $templates; do
 			if zaf_bglimit 5; then
 				(
-				tn=$(zaf_zbxapi_gettemplate $t)
+				tn=$(zaf_zbxapi_gettemplate $t name)
 				zaf_wrn "Exporting template $tn($t)..."
 				zaf_zbxapi_export_template $t >"$dir/$tn.xml"
 				) &
 			else
-				tn=$(zaf_zbxapi_gettemplate $t)
+				tn=$(zaf_zbxapi_gettemplate $t name)
 				zaf_wrn "Exporting template $tn($t)..."
 				zaf_zbxapi_export_template $t >"$dir/$tn.xml"
 			fi
