@@ -4,7 +4,9 @@ CONTROLFILES=$(foreach p,$(PLUGINS),$(p)/control.zaf)
 ZAF_EXPORT_OPTS=$(foreach o,$(ZAF_OPTIONS),$(shell echo $(o)|cut -d '=' -f 1))
 DEBIAN_DIR=tmp/deb
 DEBIAN_CTRL=$(DEBIAN_DIR)/DEBIAN
-DEBIAN_PKG=$(shell . lib/zaf.lib.sh; echo out/zaf-$$ZAF_VERSION.deb)
+ifeq ($(DEBIAN_PKG),)
+ DEBIAN_PKG=$(shell . lib/zaf.lib.sh; echo out/zaf-$$ZAF_VERSION.deb)
+endif
 ifeq ($(ZAF_DEBUG),)
  ZAF_DEBUG=0
 endif
