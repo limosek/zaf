@@ -6,7 +6,7 @@ if [ -z "$ZAF_URL" ]; then
 	ZAF_URL="https://github.com/limosek/zaf/"
 fi
 
-[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=1.1
+[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=1.2
 
 # Lite version of zaf_fetch_url, full version will be loaded later
 zaf_fetch_url(){
