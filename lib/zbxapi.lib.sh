@@ -73,168 +73,139 @@ zaf_zbxapi_login(){
  zaf_dbg "Logged into zabbix API ($ZAF_ZBXAPI_AUTH)"
 }
 
+# Get object from zabbix API
+# $1 object_type
+# $2 filter
+# $3 params
+# $4 output
+# $5 id
+zaf_zbxapi_get_object() {
+	local obj
+	local filter
+	local params
+	local str
+	local output
+	local id
+	local result
+
+	obj=$1
+	filter=$2
+	params=$3
+	output=$4
+	id=$5
+	[ -z "$id" ] && id=1
+	[ -n "$filter" ] && filter='"filter": {'$filter'},';
+	[ -z "$output" ] && output="shorten";
+	if [ -n "$params" ]; then
+		params='"params": {'$params', '$filter' "output":"'$output'"}';
+	else
+		params='"params": {'$filter' "output":"'$output'"}';
+	fi
+	str='{ "method": "'$obj'.get", "jsonrpc": "2.0", "auth": "'$ZAF_ZBXAPI_AUTH'",'$params', "id": "'$id'" }'
+	result=$(zaf_zbxapi_do_cache "$str" | zaf_zbxapi_getresult)
+	[ -z "$result" ] && zaf_dbg "API call result empty or error! ($str)"
+	echo $result
+}
+
 # $1 hostgroup name
 zaf_zbxapi_gethostgroupid() {
- local hstr
- local filter
- local gfilter
- local result
- 
- hstr='{
-    "method": "hostgroup.get",
-    "jsonrpc": "2.0",
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "params": {
-	"filter": {
-	 "name": ["'$1'"]
-	},
-	"output": "shorten"
-    },
-    "id": 1
- }'
- result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4)
- [ -z "$result" ] && zaf_err "HostGroup $1 not found!"
- echo $result
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "hostgroup" '"name": ["'$1'"]')
+ 	[ -z "$result" ] && zaf_err "HostGroup $1 not found!"
+ 	echo $result |zaf_zbxapi_getvalue groupid
 }
 
 # $1 hostname
 zaf_zbxapi_gethostid() {
- local hstr
- local host
- local groupid
- local filter
- local gfilter
- local result
- 
- host="$1"
- if [ -n "$host" ] ; then
-   filter='"filter": { "host": [ "'$host'" ] },'
- fi
- hstr='{
-    "method": "host.get",
-    "jsonrpc": "2.0",
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "params": {
-	'$filter'
-	"output": "shorten"
-    },
-    "id": 1
- }'
- result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4)
- [ -z "$result" ] && zaf_err "Host $1 not found!"
- echo $result
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "host" '"host": ["'$1'"]')
+ 	[ -z "$result" ] && zaf_err "Host $1 not found!"
+ 	echo $result |zaf_zbxapi_getvalue hostid
 }
 
 # $1 hostname
 zaf_zbxapi_gettemplateid() {
- local hstr
- local host
- local groupid
- local filter
- local gfilter
- local result
- 
- host="$1"
- if [ -n "$host" ] ; then
-   filter='"filter": { "host": [ "'$host'" ] },'
- fi
- hstr='{
-    "method": "template.get",
-    "jsonrpc": "2.0",
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "params": {
-	'$filter'
-	"output": "shorten"
-    },
-    "id": 1
- }'
- result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4)
- [ -z "$result" ] && zaf_err "Template $1 not found!"
- echo $result
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "template" '"host": ["'$1'"]')
+ 	[ -z "$result" ] && zaf_err "Template $1 not found!"
+ 	echo $result |zaf_zbxapi_getvalue templateid
 }
 
 # $1 hostid
 zaf_zbxapi_gethost() {
- local hstr
- local host
- local groupid
- local filter
- local gfilter
- local result
- 
- hostid="$1"
- if [ -n "$hostid" ] ; then
-   filter='"hostids": [ "'$hostid'" ],'
- fi
- hstr='{
-    "method": "host.get",
-    "jsonrpc": "2.0",
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "params": {
-	'$filter'
-	"output": "extend"
-    },
-    "id": 1
- }'
- result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | zaf_zbxapi_getvalue host)
- [ -z "$result" ] && zaf_err "Hostid $1 not found!"
- echo $result
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "host" '' '"hostids": ["'$1'"]' 'extend')
+ 	[ -z "$result" ] && zaf_err "Hostid $1 not found!"
+ 	echo $result | zaf_zbxapi_getvalue "host"
 }
 
 # $1 templateid
 zaf_zbxapi_gettemplate() {
- local hstr
- local host
- local groupid
- local filter
- local gfilter
- local result
- 
- hostid="$1"
- if [ -n "$hostid" ] ; then
-   filter='"templateids": [ "'$hostid'" ],'
- fi
- hstr='{
-    "method": "template.get",
-    "jsonrpc": "2.0",
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "params": {
-	'$filter'
-	"output": "extend"
-    },
-    "id": 1
- }'
- result=$(zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | zaf_zbxapi_getvalue host)
- [ -z "$result" ] && zaf_err "Templateid $1 not found!"
- echo $result
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "template" '' '"templateids": ["'$1'"]' 'extend')
+ 	[ -z "$result" ] && zaf_err "Templateid $1 not found!"
+ 	echo $result 
 }
 
-
-# $1 hostgroupid
+# $1 hostgroupid 
 zaf_zbxapi_gethostsingroup() {
- local hstr
- local host
- local groupid
- local filter
- local gfilter
+	local result
 
- groupid="$1"
- if [ -n "$groupid" ]; then
-   gfilter='"groupids": [ "'$groupid'" ],'
- fi
+ 	result=$(zaf_zbxapi_get_object "host" '' '"groupids": ["'$1'"]')
+ 	[ -z "$result" ] && zaf_wrn "No hosts in groupid '$1'"
+ 	echo $result | zaf_zbxapi_getvalue "hostid"
+}
 
- hstr='{
-    "method": "host.get",
-    "jsonrpc": "2.0",
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "params": {
-	'$gfilter'
-	'$filter'
-	"output": "shorten"
-    },
-    "id": 1
- }'
- zaf_zbxapi_do_cache "$hstr" | zaf_zbxapi_getresult | tr ',' '\n' | cut -d '"' -f 4
+# Get all hostids in system
+zaf_zbxapi_gethostids() {
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "host")
+ 	echo $result | zaf_zbxapi_getvalue "hostid"
+}
+
+# Get all templateids in system
+zaf_zbxapi_gettemplateids() {
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "template")
+ 	echo $result | zaf_zbxapi_getvalue "templateid"
+}
+
+# $1 hostgroupid 
+zaf_zbxapi_gettemplatesingroup() {
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "template" '' '"groupids": ["'$1'"]')
+ 	[ -z "$result" ] && zaf_wrn "No templates in groupid '$1'"
+ 	echo $result | zaf_zbxapi_getvalue "templateid"
+}
+
+# $1 map or null for all
+zaf_zbxapi_getmapid() {
+	local result
+
+	if [ -n "$1" ]; then
+ 		result=$(zaf_zbxapi_get_object "map" '"name": ["'$1'"]')
+	else
+ 		result=$(zaf_zbxapi_get_object "map")
+	fi
+ 	[ -z "$result" ] && zaf_err "Map $1 not found"
+ 	echo $result | zaf_zbxapi_getvalue "sysmapid"
+}
+
+# $1 mapid
+zaf_zbxapi_getmap() {
+	local result
+
+ 	result=$(zaf_zbxapi_get_object "map" '' '"sysmapids": ["'$1'"]' 'extend')
+ 	[ -z "$result" ] && zaf_err "Mapid $1 not found"
+ 	echo $result | zaf_zbxapi_getvalue "name"
 }
 
 # Object backup

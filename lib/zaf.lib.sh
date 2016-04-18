@@ -24,6 +24,20 @@ zaf_err() {
         logger -s -t zaf "Exiting with error!"
         exit 1
 }
+# Help option
+# $1 - key
+# $2 - 
+zaf_hlp() {
+	local kl
+	local dl
+	local cols
+
+	cols=$COLUMNS
+	[ -z "$cols" ] && cols=120
+	kl=$(expr $cols / 3)
+	dl=$(expr $cols - $kl)
+	printf %-${kl}s%-${dl}s%b "$1" "$2" "\n"
+}
 
 zaf_version(){
 	echo $ZAF_VERSION

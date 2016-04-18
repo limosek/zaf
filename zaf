@@ -260,18 +260,38 @@ self-remove)
 api)
 	zaf_zbxapi_login
 	case $2 in
-	hostid)
-		zaf_zbxapi_gethostid "$3"
+	*-id)
+ 		obj=$(echo $2|cut -d '-' -f 1)
+		[ -z "$3" ] && zaf_err "$0 $1 $2 <$obj>"
+		eval zaf_zbxapi_get${obj}id "$3"
 		;;
-	host)
-		zaf_zbxapi_gethost "$3"
-		;;	
-	hostgroupid)
-		zaf_zbxapi_gethostgroupid "$3"
-		;;	
-	hosts)
-		gid=$(zaf_zbxapi_gethostgroupid "$3") || exit 1
-		zaf_zbxapi_gethostsingroup $gid
+	id-*)
+		obj=$(echo $2|cut -d '-' -f 2)
+		[ -z "$3" ] && zaf_err "$0 $1 $2 <id>"
+		eval zaf_zbxapi_get${obj} "$3"
+		;;
+	host-ids)
+		if [ -n "$3" ]; then
+			gid=$(zaf_zbxapi_gethostgroupid "$3") || exit 1
+			zaf_dbg "Selecting all hosts in group $3($gid)"
+			zaf_zbxapi_gethostsingroup $gid
+		else
+			zaf_dbg "Selecting all hosts in system"
+			zaf_zbxapi_gethostids
+		fi
+		;;
+	template-ids)
+		if [ -n "$3" ]; then
+			gid=$(zaf_zbxapi_gethostgroupid "$3") || exit 1
+			zaf_dbg "Selecting all templates in group $3($gid)"
+			zaf_zbxapi_gettemplatesingroup $gid
+		else
+			zaf_dbg "Selecting all templates in system"
+			zaf_zbxapi_gettemplateids
+		fi
+		;;
+	map-ids)
+		zaf_zbxapi_getmapid
 		;;
 	export-hosts)
 		shift; shift
@@ -363,15 +383,16 @@ api)
 		;;
 	*)
 		echo "$0 api command [parameters]"
-		echo "hostid 'host'			Get hostid from hostname"
-		echo "host 'hostid'			Get hostname from hostid"
-		echo "hostgroupid 'hostgroup'		Get hostgroup id from hostgroup"
-		echo "hosts 'hostgroup'			Get hosts in group"
-		echo "export-hosts dir [hostgroup]	Backup all hosts [in group] (get their config from zabbix and save to dir/hostname.xml)" 
-		echo "export-host 'host'		Backup host (get config from zabbix to stdout)"
-		echo "import-template {plugin|file}	Import template for plugin or from file"
-		echo "export-template 'name'		Export template to stdout"
-		echo "export-templates dir		Export all template to dir"
+		for i in host template map; do
+			zaf_hlp "${i}-id $i" "Get $i id"
+			zaf_hlp "id-${i} id" "Get $i name from id" 
+		done
+		zaf_hlp "hosts hostgroup" "Get hosts in group"
+		zaf_hlp "export-hosts dir [hg]"	"Backup all hosts [in group hg] (get their config from zabbix and save to dir/hostname.xml)" 
+		zaf_hlp "export-host host" "Backup host (get config from zabbix to stdout)"
+		zaf_hlp "import-template {plugin|file}"	"Import template for plugin or from file"
+		zaf_hlp "export-template name"	"Export template to stdout"
+		zaf_hlp "export-templates dir"	"Export all template to dir"
 		echo
 		exit
 		;;
@@ -381,24 +402,33 @@ api)
 *)
 	echo "$0 Version ${ZAF_VERSION}. Please use some of this commands:"
 	echo "$0 Cmd [ZAF_OPTION=value] [ZAF_CTRL_Option=value] [ZAF_CTRLI_Item_Option=value] ..."
-	echo "Commands:"
-	echo "$0 update			To update repo (not plugins, similar to apt-get update)"
-	echo "$0 upgrade		To upgrade installed plugins from repo" 
-	echo "$0 plugins		To list installed plugins"
-	echo "$0 show [plugin]		To show installed plugins or plugin info"
-	echo "$0 items [plugin]		To list all suported items [for plugin]"
-	echo "$0 test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]"
-	echo "$0 get [plugin[.item]]	To test [all] suported items by zabbix_get [for plugin]"
-	echo "$0 precache [plugin[.item]]	To precache [all] suported items"
-	echo "$0 install plugin		To install plugin"
-	echo "$0 remove plugin		To remove plugin" 
-	echo "$0 api			To zabbix API functions. See $0 api for more info."
-	echo "$0 userparms		See userparms generated from zaf on stdout"
-	echo "$0 agent-config		Reconfigure zabbix userparms in $ZAF_AGENT_CONFIGD"
-
-	echo "$0 self-upgrade		To self-upgrade zaf"
-	echo "$0 self-remove		To self-remove zaf and its config"
-	echo "$0 cache-clean		To remove all entries from cache"
+	echo "Plugin manipulation commands:"
+	zaf_hlp "$0 update" "To update repo (not plugins, similar to apt-get update)"
+	zaf_hlp "$0 upgrade" "To upgrade installed plugins from repo" 
+	zaf_hlp "$0 install plugin" "To install plugin"
+	zaf_hlp "$0 remove plugin" "To remove plugin" 
+	echo
+	echo "Plugin info commands:"
+	zaf_hlp "$0 plugins" "To list installed plugins"
+	zaf_hlp "$0 show [plugin]"	"To show installed plugins or plugin info"
+	zaf_hlp "$0 items [plugin]" "To list all suported items [for plugin]"
+	echo
+	echo "Plugin diagnostic commands:"
+	zaf_hlp "$0 test [plugin[.item]]" "To test [all] suported items by zabbix_agentd [for plugin]"
+	zaf_hlp "$0 get [plugin[.item]]" "To test [all] suported items by zabbix_get [for plugin]"
+	zaf_hlp "$0 precache [plugin[.item]]" "To precache [all] suported items"
+	echo
+	echo "Zabbix API commands:"
+	zaf_hlp "$0 api" "To zabbix API functions. See $0 api for more info."
+	echo
+	echo "Agent config info commands:"
+	zaf_hlp "$0 userparms" "See userparms generated from zaf on stdout"
+	zaf_hlp "$0 agent-config" "Reconfigure zabbix userparms in $ZAF_AGENT_CONFIGD"
+	echo
+	echo "Zaf related commands:"
+	zaf_hlp "$0 self-upgrade" "To self-upgrade zaf"
+	zaf_hlp "$0 self-remove" "To self-remove zaf and its config"
+	zaf_hlp "$0 cache-clean" "To remove all entries from cache"
 	echo
 	;;
 
