@@ -53,7 +53,10 @@ deb-control:
 deb-scripts:
 	@. lib/zaf.lib.sh; \
 	. lib/ctrl.lib.sh; \
-	cat files/postinst.template | zaf_far '{PLUGINS}' "$(PLUGINS)"  | zaf_far "{IPLUGINS}" "$(IPLUGINS)" | zaf_far '{ZAF_LIB_DIR}' "/usr/lib/zaf" >$(DEBIAN_CTRL)/postinst
+	cat files/postinst.template | \
+		zaf_far '{PLUGINS}' "$$(for p in $(PLUGINS); do echo $$(basename $$p); done)"  | \
+		zaf_far '{IPLUGINS}' "$$(for p in $(IPLUGINS); do echo $$(basename $$p); done)" | \
+		zaf_far '{ZAF_LIB_DIR}' "/usr/lib/zaf" >$(DEBIAN_CTRL)/postinst
 	@chmod +x $(DEBIAN_CTRL)/postinst
 	@cp files/preinst.template $(DEBIAN_CTRL)/preinst
 	@chmod +x $(DEBIAN_CTRL)/preinst
