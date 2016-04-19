@@ -52,6 +52,7 @@ if [ -f ./lib/zaf.lib.sh ]; then
 [ -f ./lib/zaf.${ZAF_OS}.sh ] && . ./lib/zaf.${ZAF_OS}.sh
 else 
 . ${ZAF_LIB_DIR}/zaf.lib.sh
+. ${ZAF_LIB_DIR}/plugin.lib.sh
 . ${ZAF_LIB_DIR}/os.lib.sh
 . ${ZAF_LIB_DIR}/ctrl.lib.sh
 . ${ZAF_LIB_DIR}/cache.lib.sh
