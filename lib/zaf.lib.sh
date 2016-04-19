@@ -296,12 +296,12 @@ zaf_install_plugin() {
 			control=${plugindir}/control.zaf
 			[ "$ZAF_DEBUG" -gt 1 ] && zaf_plugin_info "${control}"
 			zaf_ctrl_check_deps "${control}"
-			zaf_ctrl_install "$url" "${control}" "${plugindir}"
 			zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_cron "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_generate_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
+			zaf_ctrl_install "$url" "${control}" "${plugindir}"
 		else
 			zaf_err "Cannot install plugin '$plugin' to $plugindir!"
 		fi

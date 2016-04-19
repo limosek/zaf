@@ -115,6 +115,7 @@ zaf_ctrl_sudo() {
 
 	pdir="$3"
 	plugin=$1
+	! [ -d "$ZAF_SUDOERSD" ] && zaf_wrn "$ZAF_SUDOERSD nonexistent! Skipping sudo install!"
 	zaf_dbg "Installing sudoers entry $ZAF_SUDOERSD/zaf_$plugin"
 	sudo=$(zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}")
 	[ -z "$sudo" ] && return  # Nothing to install
@@ -142,6 +143,7 @@ zaf_ctrl_cron() {
 
 	pdir="$3"
 	plugin=$1
+	! [ -d "$ZAF_CROND" ] && zaf_wrn "$ZAF_CROND nonexistent! Skipping cron install!"
 	zaf_dbg "Installing cron entry $ZAF_CROND/zaf_$plugin"
 	cron=$(zaf_ctrl_get_global_option $2 "Cron")
 	[ -z "$cron" ] && return # Nothing to install
