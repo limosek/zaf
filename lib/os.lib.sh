@@ -1,12 +1,15 @@
 # Os related functions
 
 zaf_configure_os_openwrt() {
-    ZAF_AGENT_RESTART="/etc/init.d/zabbix_agentd restart"
+    ZAF_AGENT_RESTART="zaf agent-config; /etc/init.d/zabbix_agentd restart"
     ZAF_AGENT_CONFIGD="/var/run/zabbix_agentd.conf.d/"
     ZAF_AGENT_CONFIG="/etc/zabbix_agentd.conf"
     ZAF_AGENT_PKG="zabbix-agentd"
     ZAF_CURL_INSECURE=1
 }
+zaf_configure_os_beesip() {
+   zaf_configure_os_openwrt
+} 
 
 zaf_configure_os_freebsd() {
     ZAF_AGENT_PKG="zabbix3-agent"

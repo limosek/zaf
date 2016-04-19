@@ -11,17 +11,17 @@ zaf_msg() {
 	echo $@
 }
 zaf_trc() {
-	[ "$ZAF_DEBUG" -ge "3" ] && logger -s -t zaf -- $@
+	[ "$ZAF_DEBUG" -ge "3" ] && logger -p user.info -s -t zaf-trace -- $@
 }
 zaf_dbg() {
-	[ "$ZAF_DEBUG" -ge "2" ] && logger -s -t zaf -- $@
+	[ "$ZAF_DEBUG" -ge "2" ] && logger -p user.debug -s -t zaf-debug -- $@
 }
 zaf_wrn() {
-	[ "$ZAF_DEBUG" -ge "1" ] && logger -s -t zaf -- $@
+	[ "$ZAF_DEBUG" -ge "1" ] && logger -p user.warn -s -t zaf-warning -- $@
 }
 zaf_err() {
-	logger -s -t zaf -- $@
-        logger -s -t zaf "Exiting with error!"
+	logger -s -p user.err -t zaf-error -- $@
+        logger -s -p user.err -t zaf-error "Exiting with error!"
         exit 1
 }
 # Help option

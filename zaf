@@ -83,9 +83,11 @@ userparms)
 	;;
 
 agent-config)
+	zaf_wrn "Generating config files in $ZAF_AGENT_CONFIGD ..."
 	for plugin in $(zaf_list_plugins); do
 		plugindir=$ZAF_PLUGINS_DIR/$plugin
 		control=$plugindir/control.zaf
+		zaf_dbg "Generating ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 		zaf_ctrl_generate_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 	done
