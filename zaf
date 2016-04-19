@@ -65,14 +65,17 @@ fi
 
 case $1 in
 
-check-agent-config)
-	zaf_check_agent_config
-	;;
-
 cache-clean)
 	zaf_cache_clean
 	;;
 
+version)
+	echo "$ZAF_VERSION<git $ZAF_GITBRANCH>"
+	[ $ZAF_DEBUG -gt 1 ] && set |grep -E ^ZAF_ 
+	;;
+
+
+###### Agent related commands
 userparms)
 	for plugin in $(zaf_list_plugins); do
 		plugindir=$ZAF_PLUGINS_DIR/$plugin
@@ -81,7 +84,6 @@ userparms)
 			  | zaf_far '{PLUGINDIR}' "${plugindir}"
 	done
 	;;
-
 agent-config)
 	zaf_wrn "Generating config files in $ZAF_AGENT_CONFIGD ..."
 	for plugin in $(zaf_list_plugins); do
@@ -92,7 +94,11 @@ agent-config)
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 	done
 	;;
+check-agent-config)
+	zaf_check_agent_config
+	;;
 
+###### Plugins related commands
 update)
 	zaf_wrn "Updating repository ${ZAF_REPO_GITURL}..."
 	zaf_update_repo
@@ -119,11 +125,9 @@ show)
 		fi
 	fi
 	;;
-
 plugins)
 	zaf_list_plugins
 	;;
-
 items)
 	shift
 	if [ -z "$1" ]; then
@@ -132,7 +136,6 @@ items)
 		zaf_list_plugin_items "$1"
 	fi
 	;;
-
 test)
 	[ "$USER" != "zabbix" ] && zaf_wrn "You are not zabbix user. Test will be run with your privileges and sudo access!"
 	shift
@@ -171,7 +174,6 @@ get)
 		done
 	done
 	;;
-
 precache)
 	shift
 	for i in $*; do
@@ -188,7 +190,6 @@ precache)
 		fi
 	done
 	;;
-
 install)
 	shift
 	[ -z "$1" ] && echo "$0 install plugin [plugin]..."
@@ -202,7 +203,6 @@ install)
 	done
 	[ -n "$installed" ] && zaf_is_root && zaf_restart_agent
 	;;
-
 reinstall)
 	shift
 	[ -z "$1" ] && echo "$0 reinstall plugin [plugin]..."
@@ -216,7 +216,6 @@ reinstall)
 	done
 	[ -n "$reinstalled" ] && zaf_is_root && zaf_restart_agent
 	;;
-
 remove)
 	shift
 	[ -z "$1" ] && echo "$0 remove plugin [plugin]..."
@@ -229,6 +228,7 @@ remove)
 	[ -n "$removed" ] && zaf_is_root && zaf_restart_agent
 	;;
 
+###### Zaf related commands
 self-upgrade)
 	shift
 	[ -z "$1" ] && auto=auto
@@ -241,7 +241,6 @@ self-upgrade)
 	zaf_fetch_url $ZAF_RAW_URL/$ZAF_GITBRANCH/install.sh | exec sh -s $auto "$@"
 	exit
 	;;
-	
 self-remove)
 	shift
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-remove."
@@ -258,7 +257,7 @@ self-remove)
 	  echo "To continue, please do $0 self-remove force"
 	fi
       	;;
-
+###### API related commands
 api)
 	zaf_zbxapi_login
 	case $2 in
@@ -283,8 +282,13 @@ api)
 		fi
 		;;
 	get-inventory)
-		[ -z "$3" ] && zaf_err "$0 $1 <host> [field]"
-		zaf_zbxapi_gethostinventory $3 $4
+		[ -z "$3" ] && zaf_err "$0 $1 field [host]. If host unspecified, use hostname"
+		if [ -z "$4" ]; then
+			host=$(hostname)
+		else
+			host="$4"
+		fi
+		zaf_zbxapi_gethostinventory $host $3
 		;;
 	get-template-ids)
 		if [ -n "$3" ]; then
@@ -400,7 +404,7 @@ api)
 		zaf_hlp "export-template name"	"Export template to stdout"
 		zaf_hlp "export-templates dir"	"Export all template to dir"
 		echo
-		exit
+		[ -n "$2" ] && zaf_err "Bad API command '$2'!"
 		;;
 	esac
 	;;
@@ -436,6 +440,7 @@ api)
 	zaf_hlp "$0 self-remove" "To self-remove zaf and its config"
 	zaf_hlp "$0 cache-clean" "To remove all entries from cache"
 	echo
+	[ -n "$1" ] && zaf_err "Bad command '$1'!"
 	;;
 
 esac
