@@ -23,11 +23,13 @@ zaf_tocache(){
 	! [ -w $ZAF_CACHE_DIR ] && return 1
 	local key
 	local value
+	local expiry
 
 	key=$(zaf_cache_key "$1")
 	echo "$2" >$ZAF_CACHE_DIR/$key
 	echo "$1" >$ZAF_CACHE_DIR/$key.info
-	touch -m -d "$3 seconds" $ZAF_CACHE_DIR/$key.info
+	expiry=$(zaf_date_add "$3")
+	touch -m -d "$expiry" $ZAF_CACHE_DIR/$key.info
 	zaf_trc "Cache: Saving entry $1($key)"
 }
 
@@ -37,13 +39,15 @@ zaf_tocache(){
 zaf_tocache_stdin(){
 	! [ -w $ZAF_CACHE_DIR ] && return 1
 	local key
+	local expiry
 
 	key=$(zaf_cache_key "$1")
 	cat >$ZAF_CACHE_DIR/$key
 	if [ -s $ZAF_CACHE_DIR/$key ]; then
 		zaf_trc "Cache: Saving entry $1($key)"
 		echo "$1" >$ZAF_CACHE_DIR/$key.info
-		touch -m -d "$2 seconds" $ZAF_CACHE_DIR/$key.info
+		expiry=$(zaf_date_add "$3")
+		touch -m -d "$expiry" $ZAF_CACHE_DIR/$key.info
 		cat $ZAF_CACHE_DIR/$key
 	else
 		rm $ZAF_CACHE_DIR/$key

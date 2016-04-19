@@ -39,6 +39,7 @@ fi
 
 if ! type zaf_version >/dev/null; then
 . lib/zaf.lib.sh
+. lib/plugin.lib.sh
 . lib/os.lib.sh
 . lib/ctrl.lib.sh 
 . lib/cache.lib.sh 
@@ -278,7 +279,7 @@ zaf_install_all() {
 	rm -rif ${ZAF_TMP_DIR}
 	mkdir -p ${ZAF_TMP_DIR}
 	zaf_install_dir ${ZAF_LIB_DIR}
-	for i in lib/zaf.lib.sh lib/os.lib.sh lib/ctrl.lib.sh lib/cache.lib.sh lib/zbxapi.lib.sh README.md; do
+	for i in lib/zaf.lib.sh lib/plugin.lib.sh lib/os.lib.sh lib/ctrl.lib.sh lib/cache.lib.sh lib/zbxapi.lib.sh lib/JSON.sh README.md; do
 		zaf_install $i ${ZAF_LIB_DIR}/ || zaf_err "Error installing $i"
 	done
 	for i in lib/zaflock lib/zafcache lib/preload.sh; do

@@ -44,6 +44,7 @@ fi
 
 if [ -f ./lib/zaf.lib.sh ]; then
 . ./lib/zaf.lib.sh
+. ./lib/plugin.lib.sh
 . ./lib/os.lib.sh
 . ./lib/ctrl.lib.sh
 . ./lib/cache.lib.sh
@@ -397,7 +398,10 @@ api)
 			zaf_hlp "get-${i}-id $i" "Get $i id"
 			zaf_hlp "get-byid-${i} id [property]" "Get $i property from id. Leave empty property for JSON" 
 		done
-		zaf_hlp "get-inventory host [fields]"	"Get inventory fields [or all fields]" 
+		zaf_hlp "get-inventory host [fields]"	"Get inventory fields [or all fields]"
+		zaf_hlp "get-host-ids [hg]" "Get all hostids or hostids in group hg"
+		zaf_hlp "get-template-ids [hg]" "Get all templateids or templateids in group hg"
+		zaf_hlp "get-map-ids" "Get all mapids"
 		zaf_hlp "export-hosts dir [hg]"	"Backup all hosts [in group hg] (get their config from zabbix and save to dir/hostname.xml)" 
 		zaf_hlp "export-host host" "Backup host (get config from zabbix to stdout)"
 		zaf_hlp "import-template {plugin|file}"	"Import template for plugin or from file"
