@@ -8,6 +8,10 @@ zaf_cache_clean(){
 		zaf_err "Cache dir not set."
 	fi
 	mkdir -p "$ZAF_CACHE_DIR"
+	if zaf_is_root; then
+		chmod g+rwx "$ZAF_CACHE_DIR"
+		chgrp zabbix "$ZAF_CACHE_DIR"
+	fi
 }
 
 # Get cache key from requested param
