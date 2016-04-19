@@ -374,20 +374,20 @@ api)
 			if [ -f "$ZAF_PLUGINS_DIR/$1/template.xml" ]; then
 				template="$ZAF_PLUGINS_DIR/$1/template.xml"
 				zaf_wrn "Importing template $template"
-				zaf_zbxapi_import_template $template || zaf_err "Error importing template"
+				zaf_zbxapi_import_config $template || zaf_err "Error importing template"
 			else
 				url="$(zaf_plugin_option $1 Template)"
 				if [ -n "$url" ]; then
-					zaf_fetch_url $url | zaf_zbxapi_import_template || zaf_err "Error importing template"
+					zaf_fetch_url $url | zaf_zbxapi_import_config || zaf_err "Error importing template"
 				else
 					url="$(zaf_plugin_option $1 Url)"
-					zaf_fetch_url $url/template.xml | zaf_zbxapi_import_template || zaf_err "Error importing template"
+					zaf_fetch_url $url/template.xml | zaf_zbxapi_import_config || zaf_err "Error importing template"
 				fi
 			fi
 		else
 			if [ -f $1 ]; then
 				zaf_wrn "Importing template $1"
-				zaf_zbxapi_import_template $1 || zaf_err "Error importing template"
+				zaf_zbxapi_import_config $1 || zaf_err "Error importing template"
 			else
 				zaf_err "Unknown plugin $1!"
 			fi
