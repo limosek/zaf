@@ -412,7 +412,8 @@ zaf_list_items() {
 
 zaf_get_item() {
 	if which zabbix_get >/dev/null; then
-		zabbix_get -s localhost -k "$1" || zaf_wrn "Cannot reach agent on localhost. Please localhost to Server list."
+		zaf_dbg zabbix_get -s localhost -k "'$1'"
+		(zabbix_get -s localhost -k "$1" | tr '\n' ' '; echo) || zaf_wrn "Cannot reach agent on localhost. Please localhost to Server list."
 		return 11
 	else
 		zaf_wrn "Please install zabbix_get binary to check items over network."
@@ -421,7 +422,12 @@ zaf_get_item() {
 }
 
 zaf_test_item() {
-	$ZAF_AGENT_BIN -t "$1"
+	if $ZAF_AGENT_BIN -t "$1" | grep ZBX_NOTSUPPORTED; then
+		return 1
+	else
+		$ZAF_AGENT_BIN -t "$1" | tr '\n' ' '
+		echo
+	fi
 }
 
 zaf_precache_item() {

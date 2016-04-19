@@ -77,7 +77,7 @@ userparms)
 	for plugin in $(zaf_list_plugins); do
 		plugindir=$ZAF_PLUGINS_DIR/$plugin
 		control=$plugindir/control.zaf
-		zaf_ctrl_generate_cfg "${control}" "${plugin}" \
+		zaf_ctrl_generate_cfg "${control}" "${plugin}" "noscripts" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}"
 	done
 	;;

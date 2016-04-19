@@ -281,7 +281,7 @@ zaf_install_all() {
 	for i in lib/zaf.lib.sh lib/os.lib.sh lib/ctrl.lib.sh lib/cache.lib.sh lib/zbxapi.lib.sh README.md; do
 		zaf_install $i ${ZAF_LIB_DIR}/ || zaf_err "Error installing $i"
 	done
-	for i in lib/zaflock lib/preload.sh; do
+	for i in lib/zaflock lib/zafcache lib/preload.sh; do
 		zaf_install_bin $i ${ZAF_LIB_DIR}/ || zaf_err "Error installing $i"
 	done
 	zaf_install_dir ${ZAF_BIN_DIR}
@@ -295,8 +295,10 @@ zaf_install_all() {
 
 zaf_postconfigure() {
 	if zaf_is_root; then
+	    ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf cache-clean
 	    [ "${ZAF_GIT}" = 1 ] && ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf update
             ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf reinstall zaf || zaf_err "Error installing zaf plugin."
+	    ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf agent-config || zaf_err "Error configuring agent."
             if zaf_is_root && ! zaf_test_item zaf.framework_version; then
 		echo "Something is wrong with zabbix agent config."
 		echo "Ensure that zabbix_agentd reads ${ZAF_AGENT_CONFIG}"

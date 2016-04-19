@@ -19,19 +19,10 @@ trap "rm -rif ${ZAF_TMP_DIR}" EXIT
 
 export ZAF_LIB_DIR
 export ZAF_TMP_DIR
+export ZAF_CACHE_DIR
 export ZAF_PLUGINS_DIR
 
-if [ "$1" = "_cache" ] || [ "$1" = "_nocache" ] ; then
-	[ "$1" = "_nocache" ] && export ZAF_NOCACHE=1
-	shift
-	seconds=$1
-	shift
-	parms=$(echo $*|tr -d ' ')
-	if ! zaf_fromcache $parms; then
-		([ "$(basename $0)" = "preload.sh" ] && [ -n "$*" ] && $@ ) | zaf_tocache_stdin $parms $seconds
-	fi
-else
-	[ "$(basename $0)" = "preload.sh" ] && [ -n "$*" ] && $@
-fi
+[ "$(basename $0)" = "preload.sh" ] && [ -n "$*" ] && $@
+
 
 

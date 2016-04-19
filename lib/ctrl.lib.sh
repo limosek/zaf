@@ -8,7 +8,7 @@ zaf_ctrl_get_items() {
 # Get item body from stdin
 # $1 itemname
 zaf_ctrl_get_item_block() {
-	grep -v '^#' | awk '/^Item '$1'/ { i=0;
+	grep -vE '^#[a-zA-Z ]' | awk '/^Item '$1'/ { i=0;
 	while (i==0) {
 		getline;
 		if (/^\/Item/) exit;
@@ -22,7 +22,7 @@ zaf_ctrl_get_item_block() {
 # Get global plugin block body from stdin
 # $1 itemname
 zaf_ctrl_get_global_block() {
-	grep -v '^#' | awk '{ i=0; print $0;
+	grep -vE '^#[a-zA-Z ]' | awk '{ i=0; print $0;
 	while (i==0) {
 		getline;
 		if (/^Item /) exit;
@@ -33,7 +33,7 @@ zaf_ctrl_get_global_block() {
 # Get item multiline option
 # $1 optionname
 zaf_block_get_moption() {
-	awk '/^'$1'::$/ { i=0; print $0;
+	awk '/^'$1'::$/ { i=0;
 	while (i==0) {
 		getline;
 		if (/^::$/) {i=1; continue;};
@@ -181,6 +181,7 @@ zaf_ctrl_install() {
 # Generates zabbix cfg from control file
 # $1 control
 # $2 pluginname
+# $3 if nonempty, only return cfg, do not generate scripts
 zaf_ctrl_generate_cfg() {
 	local items
 	local cmd
@@ -211,20 +212,25 @@ zaf_ctrl_generate_cfg() {
 	    fi
 	    cache=$(zaf_ctrl_get_item_option $1 $i "Cache")
 	    if [ -n "$cache" ]; then
-		cache="_cache '$cache' "
+		cache="${ZAF_LIB_DIR}/zafcache '$cache' "
 	    fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
+	    if [ -z "$cache" ] && [ -z "$lock" ]; then
+		preload="${ZAF_LIB_DIR}/preload.sh "
+	    else
+		preload=""
+	    fi
             if [ -n "$cmd" ]; then
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock$cmd";
+                printf "%s" "UserParameter=$ikey,${preload}${cache}${lock}${cmd}"; echo
                 continue
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
             if [ -n "$cmd" ]; then
                 zaf_ctrl_get_item_option $1 $i "Script" | \
-		  zaf_far '{INCLUDES}' '. /etc/zaf.conf; . ${ZAF_LIB_DIR}/zaf.lib.sh; . ${ZAF_LIB_DIR}/ctrl.lib.sh; . ${ZAF_LIB_DIR}/zbxapi.lib.sh; . ${ZAF_LIB_DIR}/cache.lib.sh; ' \
+		  zaf_far '{INCLUDES}' ". $ZAF_LIB_DIR/preload.sh; " \
 		  >${ZAF_TMP_DIR}/${iscript}.sh;
-                zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-                $(which echo) "UserParameter=$ikey,$cache $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args";
+                [ -z "$3" ] && zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
+                printf "%s" "UserParameter=$ikey,${preload}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args"; echo
                 continue;
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"

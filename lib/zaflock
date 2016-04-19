@@ -1,12 +1,9 @@
 #!/bin/sh
 
-. /etc/zaf.conf
-
-. ${ZAF_LIB_DIR}/zaf.lib.sh
+. $(dirname $0)/preload.sh
 
 help() {
-	echo "$0 key cmd"
-	exit 2
+	zaf_err "$0 key cmd"
 }
 
 lkey="$1"
