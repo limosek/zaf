@@ -3,11 +3,13 @@
 # $1 - query string
 zaf_zbxapi_do() {
 	local result
+	local query
 	local tmpfile
 
 	tmpfile=$ZAF_TMP_DIR/zapi$$
-	zaf_trc "Zabbix API: $1"
-	curl -s -f -L -X POST -H 'Content-Type: application/json-rpc' -d "$1" "$ZAF_ZBXAPI_URL" >$tmpfile
+	query="$1"
+	zaf_trc "Zabbix API: $query"
+	curl -s -f -L -X POST -H 'Content-Type: application/json-rpc' -d "$query" "$ZAF_ZBXAPI_URL" >$tmpfile
 	if [ $? = 0 ] &&  $ZAF_LIB_DIR/JSON.sh -b <$tmpfile | grep -q '"result"'; then
 		zaf_trc "API OK"
 		cat $tmpfile
@@ -21,11 +23,13 @@ zaf_zbxapi_do() {
 zaf_zbxapi_do_cache() {
 	local result
 	local tmpfile
+	local query
 
+	query="$(echo $1 | tr '\n' ' ')"
 	tmpfile=$ZAF_TMP_DIR/zcapi$$
 	if ! zaf_fromcache "$1"; then
 		zaf_zbxapi_do "$1" >$tmpfile
-		[ -s "$tmpfile" ] && cat $tmpfile | zaf_tocache_stdin "$1" 60
+		[ -s "$tmpfile" ] && cat $tmpfile | zaf_tocache_stdin "$query" 60
 		rm -f $tmpfile
 	fi
 }

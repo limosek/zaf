@@ -180,12 +180,6 @@ zaf_restart_agent() {
 	${ZAF_AGENT_RESTART} || zaf_err "Cannot restart Zabbix agent (${ZAF_AGENT_RESTART}). Try $ZAF_AGENT_BIN -f !";
 }
 
-# Check if zaf.version item is populated
-zaf_check_agent_config() {
-	zaf_restart_agent
-	${ZAF_AGENT_BIN} -t zaf.version
-}
-
 zaf_tolower() {
 	tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'
 }
@@ -204,7 +198,6 @@ zaf_stripctrl() {
 zaf_strunescape() {
 	 sed -e 's#\\\(['"$1"']\)#\1#g'
 }
-
 
 # Escape string on stdin
 # $1 - list of chars to escape

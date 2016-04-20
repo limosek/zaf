@@ -17,6 +17,7 @@ zaf_configure_os_freebsd() {
     ZAF_AGENT_CONFIGD="/usr/local/etc/zabbix3/zabbix_agentd.conf.d/"
     ZAF_AGENT_BIN="/usr/local/sbin/zabbix_agentd"
     ZAF_AGENT_RESTART="service zabbix_agentd restart"
+    ZAF_SUDOERSD="/usr/local/etc/sudoers.d"
 }
 
 zaf_detect_system() {

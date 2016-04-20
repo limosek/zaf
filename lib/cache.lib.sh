@@ -16,7 +16,7 @@ zaf_cache_clean(){
 
 # Get cache key from requested param
 zaf_cache_key(){
-	echo "$1" | md5sum - | cut -d ' ' -f 1
+	echo "$1" | (md5sum - ||md5) 2>/dev/null | cut -d ' ' -f 1
 }
 
 # Put object into cache
@@ -31,10 +31,10 @@ zaf_tocache(){
 
 	key=$(zaf_cache_key "$1")
 	echo "$2" >$ZAF_CACHE_DIR/$key
-	echo "$1" >$ZAF_CACHE_DIR/$key.info
+	echo "$1" >$ZAF_CACHE_DIR/${key}.info
 	expiry=$(zaf_date_add "$3")
-	touch -m -d "$expiry" $ZAF_CACHE_DIR/$key.info
-	zaf_trc "Cache: Saving entry $1($key)"
+	zaf_trc "Cache: Saving entry $1[$key,expiry=$expiry]"
+	touch -m -d "$expiry" $ZAF_CACHE_DIR/${key}.info
 }
 
 # Put object into cache from stdin and copy to stdout
@@ -48,13 +48,13 @@ zaf_tocache_stdin(){
 	key=$(zaf_cache_key "$1")
 	cat >$ZAF_CACHE_DIR/$key
 	if [ -s $ZAF_CACHE_DIR/$key ]; then
-		zaf_trc "Cache: Saving entry $1($key)"
-		echo "$1" >$ZAF_CACHE_DIR/$key.info
-		expiry=$(zaf_date_add "$3")
+		expiry="$(zaf_date_add $2)"
+		echo "$1 [key=$key,expiry=$expiry]" >$ZAF_CACHE_DIR/${key}.info
+		zaf_trc "Cache: Saving entry $1[key=$key,expiry=$expiry]"
 		touch -m -d "$expiry" $ZAF_CACHE_DIR/$key.info
 		cat $ZAF_CACHE_DIR/$key
 	else
-		rm $ZAF_CACHE_DIR/$key
+		rm -f "$ZAF_CACHE_DIR/$key"
 	fi
 }
 
@@ -66,6 +66,16 @@ zaf_cache_delentry(){
 	key=$(zaf_cache_key "$1")
 	zaf_trc "Cache: removing $1($key) from cache"
 	rm -f "$ZAF_CACHE_DIR/$key*"
+}
+
+# List entries in cache
+zaf_cache_list(){
+	local i
+	ls $ZAF_CACHE_DIR/*info >/dev/null 2>/dev/null || return 1
+	local key
+	for i in $ZAF_CACHE_DIR/*info; do
+		cat $i
+	done
 }
 
 # Get object from cache

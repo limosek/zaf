@@ -69,6 +69,9 @@ case $1 in
 cache-clean)
 	zaf_cache_clean
 	;;
+cache-list)
+	zaf_cache_list
+	;;
 
 version)
 	echo "$ZAF_VERSION<git $ZAF_GITBRANCH>"
@@ -94,9 +97,6 @@ agent-config)
 		zaf_ctrl_generate_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 	done
-	;;
-check-agent-config)
-	zaf_check_agent_config
 	;;
 
 ###### Plugins related commands
@@ -443,6 +443,7 @@ api)
 	zaf_hlp "$0 self-upgrade" "To self-upgrade zaf"
 	zaf_hlp "$0 self-remove" "To self-remove zaf and its config"
 	zaf_hlp "$0 cache-clean" "To remove all entries from cache"
+	zaf_hlp "$0 cache-list" "To show all entries in cache"
 	echo
 	[ -n "$1" ] && zaf_err "Bad command '$1'!"
 	;;
