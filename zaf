@@ -64,8 +64,8 @@ if ! [ -d "${ZAF_CACHE_DIR}" ]; then
 fi
 
 if zaf_is_root; then
-	chgrp zabbix "${ZAF_CACHE_DIR}"
-	chmod g+w "${ZAF_CACHE_DIR}"
+	chgrp $(id -g zabbix) "${ZAF_CACHE_DIR}"
+	chmod 770 "${ZAF_CACHE_DIR}"
 fi
 
 case $1 in

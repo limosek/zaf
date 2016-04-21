@@ -10,7 +10,7 @@ zaf_cache_clean(){
 	mkdir -p "$ZAF_CACHE_DIR"
 	if zaf_is_root; then
 		chmod 770 "$ZAF_CACHE_DIR"
-		chgrp zabbix "$ZAF_CACHE_DIR"
+		chgrp $(id -g zabbix) "$ZAF_CACHE_DIR"
 	fi
 }
 
