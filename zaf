@@ -242,7 +242,6 @@ self-upgrade)
 	shift
 	[ -z "$1" ] && auto=auto
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-upgrade."
-	rm -rf /tmp/zaf-installer && mkdir /tmp/zaf-installer
 	if ! which curl >/dev/null;
 	then
 		zaf_err "Curl not found. Cannot continue. Please install it."

@@ -27,7 +27,7 @@ zaf_err() {
 
 # Download tgz and extract to tmpdir
 zaf_download_files() {
-	[ -n $ZAF_DIR ] && zaf_err "ZAF_DIR not set!"
+	[ -z $ZAF_DIR ] && zaf_err "ZAF_DIR not set!"
 	rm -rf $ZAF_DIR
 	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C $ZAF_TMP_DIR -zx && mv $ZAF_TMP_DIR/zaf-$ZAF_GITBRANCH $ZAF_DIR \
  		|| zaf_err "Cannot download and unpack zaf!"
