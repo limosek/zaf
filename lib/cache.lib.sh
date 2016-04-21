@@ -30,6 +30,7 @@ zaf_tocache(){
 	local expiry
 
 	key=$(zaf_cache_key "$1")
+	rm -f $ZAF_CACHE_DIR/$key $ZAF_CACHE_DIR/${key}.info
 	echo "$2" >$ZAF_CACHE_DIR/$key
 	echo "$1" >$ZAF_CACHE_DIR/${key}.info
 	expiry=$(zaf_date_add "$3")
@@ -46,6 +47,7 @@ zaf_tocache_stdin(){
 	local expiry
 
 	key=$(zaf_cache_key "$1")
+	rm -f $ZAF_CACHE_DIR/$key $ZAF_CACHE_DIR/${key}.info
 	cat >$ZAF_CACHE_DIR/$key
 	if [ -s $ZAF_CACHE_DIR/$key ]; then
 		expiry="$(zaf_date_add $2)"
