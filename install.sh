@@ -285,8 +285,6 @@ zaf_configure(){
 }
 
 zaf_install_all() {
-	rm -rf ${ZAF_TMP_DIR}
-	mkdir -p ${ZAF_TMP_DIR}
 	zaf_install_dir ${ZAF_LIB_DIR}
 	for i in lib/zaf.lib.sh lib/plugin.lib.sh lib/os.lib.sh lib/ctrl.lib.sh lib/cache.lib.sh lib/zbxapi.lib.sh lib/JSON.sh README.md; do
 		zaf_install $i ${ZAF_LIB_DIR}/ || zaf_err "Error installing $i"
