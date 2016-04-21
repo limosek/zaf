@@ -11,6 +11,7 @@ fi
 
 ZAF_TMP_DIR="/tmp/zaf-installer"
 ZAF_DIR="$ZAF_TMP_DIR/zaf"
+mkdir -p $ZAF_TMP_DIR
 
 # Lite version of zaf_fetch_url, full version will be loaded later
 zaf_fetch_url(){
@@ -29,8 +30,7 @@ zaf_err() {
 zaf_download_files() {
 	[ -z $ZAF_DIR ] && zaf_err "ZAF_DIR not set!"
 	rm -rf $ZAF_DIR
-	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C $ZAF_TMP_DIR -zx && mv $ZAF_TMP_DIR/zaf-$ZAF_GITBRANCH $ZAF_DIR \
- 		|| zaf_err "Cannot download and unpack zaf!"
+	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C $ZAF_TMP_DIR -zx && mv $ZAF_TMP_DIR/zaf-$ZAF_GITBRANCH $ZAF_DIR || zaf_err "Cannot download and unpack zaf!"
 }
 
 if ! [ -f README.md ]; then
