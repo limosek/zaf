@@ -13,7 +13,7 @@ shift
 [ -z "${ZAF_LOCK_SECONDS}" ] && seconds=5
 [ -z "${ZAF_LOCK_FORCE}" ] && force=1
 
-lockfile="${ZAF_TMP_DIR}/zaflock_${lkey}"
+lockfile="/tmp/zaflock_${lkey}"
 i=0
 while [ -f "$lockfile" ] && [ $i -lt $seconds ]; do
 	sleep 1
@@ -28,7 +28,6 @@ if [ -f "$lockfile" ] && [ -z "$force" ]; then
 	exit 1
 fi
 
-touch "$lockfile"
-[ -n "$*" ] && $@
-rm -f "$lockfile"
+[ -n "$*" ] && $@ 2>"$lockfile"
+[ -s "$lockfile" ] && zaf_wrn <"$lockfile"
 

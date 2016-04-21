@@ -9,7 +9,7 @@ zaf_cache_clean(){
 	fi
 	mkdir -p "$ZAF_CACHE_DIR"
 	if zaf_is_root; then
-		chmod g+rwx "$ZAF_CACHE_DIR"
+		chmod 770 "$ZAF_CACHE_DIR"
 		chgrp zabbix "$ZAF_CACHE_DIR"
 	fi
 }
@@ -86,6 +86,7 @@ zaf_fromcache(){
 	local value
 	key=$(zaf_cache_key "$1")
 	if [ -f $ZAF_CACHE_DIR/$key ]; then
+		! [ -f "$ZAF_CACHE_DIR/$key.info" ] && { return 3; }
 		if [ "$ZAF_CACHE_DIR/$key.info" -nt "$ZAF_CACHE_DIR/$key" ]; then
 			zaf_trc "Cache: serving $1($key) from cache"
 			cat $ZAF_CACHE_DIR/$key

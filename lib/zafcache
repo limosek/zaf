@@ -10,8 +10,25 @@ seconds=$1
 shift
 [ -z "$*" ] && help
 
-parms=$(echo $*|tr -d ' ')
-if ! zaf_fromcache "$parms"; then
-	$@ | zaf_tocache_stdin "$parms" "$seconds"
+zaf_trc "zafcache($seconds): $ITEM_KEY,'$2' '$3' '$4' '$5' '$6' '$7' '$8' '$9'"
+
+if [ -z "$ITEM_KEY" ]; then
+	key=$(echo $*|tr ' ' '_')
+else
+	key="$(echo ${ITEM_KEY}|cut -d '[' -f 1)[$(shift; echo $*|tr ' ' ',')]"
+fi
+
+if ! zaf_fromcache "$key"; then
+	zaf_fromcache "$key" >/dev/null 2>/dev/null
+	[ $? -eq 3 ] && { zaf_err "Operation $key already in progress."; }
+	if which at >/dev/null 2>/dev/null; then
+		at -M now >/dev/null 2>/dev/null <<EOF
+		. $(dirname $0)/preload.sh; tmpf=\$(zaf_tmpfile cache); $@ 2>"\$tmpf" | zaf_tocache_stdin "$key" "$seconds" ; [ -s \$tmpf ] && zaf_wrn <\$tmpf
+EOF
+	else
+		tmpf=$(zaf_tmpfile cache)
+		$@ 2>"$tmpf" | zaf_tocache_stdin "$key" "$seconds" 
+		[ -s $tmpf ] && zaf_wrn <$tmpf
+	fi
 fi
 

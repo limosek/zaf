@@ -191,20 +191,28 @@ zaf_ctrl_generate_cfg() {
 	local ikey
 	local lock
 	local cache
+	local tmpfile
+	local pname
+	local pdefault
+	local pregex
+	local prest
+	local zafparms
 
 	items=$(zaf_ctrl_get_items <"$1")
+	tmpfile=$ZAF_TMP_DIR/gencfg$$
 	(set -e
 	for i in $items; do
             iscript=$(zaf_stripctrl $i)
-	    params=$(zaf_ctrl_get_item_option $1 $i "Parameters")
-	    if [ -n "$params" ]; then
+	    zaf_ctrl_get_item_option $1 $i "Parameters" >$tmpfile
+	    if [ -s "$tmpfile" ]; then
 		ikey="$2.$i[*]"
 		args=""
 		apos=1;
-		for p in $params; do
+		while read pname pdefault pregex prest; do
+			zafparams="$zafparams value=\"\$$apos\"; zaf_agentparm $pname $pdefault $pregex;"
 			args="$args \$$apos"
 			apos=$(expr $apos + 1)
-		done
+		done <$tmpfile
 	    else
 		ikey="$2.$i"
 	    fi
@@ -223,16 +231,18 @@ zaf_ctrl_generate_cfg() {
 		preload=""
 	    fi
             if [ -n "$cmd" ]; then
-                printf "%s" "UserParameter=$ikey,${preload}${cache}${lock}${cmd}"; echo
+                printf "%s" "UserParameter=$ikey,export ITEM_KEY='$ikey'; ${preload}${cache}${lock}${cmd}"; echo
                 continue
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
             if [ -n "$cmd" ]; then
-                zaf_ctrl_get_item_option $1 $i "Script" | \
-		  zaf_far '{INCLUDES}' ". $ZAF_LIB_DIR/preload.sh; " \
-		  >${ZAF_TMP_DIR}/${iscript}.sh;
+                ( echo "#!/bin/sh"
+		  echo ". $ZAF_LIB_DIR/preload.sh; "
+		  echo "$zafparams"
+		  zaf_ctrl_get_item_option $1 $i "Script"
+		  ) >${ZAF_TMP_DIR}/${iscript}.sh;
                 [ -z "$3" ] && zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-                printf "%s" "UserParameter=$ikey,${preload}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args"; echo
+                printf "%s" "UserParameter=$ikey,export ITEM_KEY='$ikey'; ${preload}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args"; echo
                 continue;
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"

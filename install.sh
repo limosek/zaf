@@ -1,6 +1,7 @@
 #!/bin/sh
 
 [ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
+export ZAF_LOG_STDERR="-s"
 if [ -z "$ZAF_URL" ]; then
 	# Runing as standalone install.sh. We have to download rest of files first.
 	ZAF_URL="https://github.com/limosek/zaf/"
@@ -8,20 +9,28 @@ fi
 
 [ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=1.2
 
+ZAF_TMP_DIR="/tmp/zaf-installer"
+ZAF_DIR="$ZAF_TMP_DIR/zaf"
+
 # Lite version of zaf_fetch_url, full version will be loaded later
 zaf_fetch_url(){
-	if [ -z "$ZAF_OFFLINE" ]; then
-		echo  curl -f -k -s -L -o - "$1" >&2; curl -f -k -s -L -o - "$1"
-	else
-		echo "Offline mode wants to download $1. Exiting." >&2
-		exit 2
-	fi
+	echo  curl -f -k -s -L -o - "$1" >&2;
+	curl -f -k -s -L -o - "$1"
 }
 
-# Download tgz and extract to /tmp/zaf-installer
+# Lite version of zaf_err, full version will be loaded later
+zaf_err() {
+	logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error -- $@
+        logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error "Exiting with error!"
+        exit 1
+}
+
+# Download tgz and extract to tmpdir
 zaf_download_files() {
-	rm -rf /tmp/zaf-installer
-	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C /tmp -zx && mv /tmp/zaf-$ZAF_GITBRANCH /tmp/zaf-installer
+	[ -n $ZAF_DIR ] && zaf_err "ZAF_DIR not set!"
+	rm -rf $ZAF_DIR
+	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C $ZAF_TMP_DIR -zx && mv $ZAF_TMP_DIR/zaf-$ZAF_GITBRANCH $ZAF_DIR \
+ 		|| zaf_err "Cannot download and unpack zaf!"
 }
 
 if ! [ -f README.md ]; then
@@ -32,7 +41,7 @@ if ! [ -f README.md ]; then
 	fi
 	echo "Installing from url $url..."
 	[ -z "$*" ] && auto=auto
-	zaf_download_files && cd /tmp/zaf-installer && exec ./install.sh $auto "$@"
+	zaf_download_files && cd $ZAF_DIR && exec ./install.sh $auto "$@"
 	echo "Error downloading and runing installer!" >&2
 	exit 2
 fi
@@ -276,7 +285,7 @@ zaf_configure(){
 }
 
 zaf_install_all() {
-	rm -rif ${ZAF_TMP_DIR}
+	rm -rf ${ZAF_TMP_DIR}
 	mkdir -p ${ZAF_TMP_DIR}
 	zaf_install_dir ${ZAF_LIB_DIR}
 	for i in lib/zaf.lib.sh lib/plugin.lib.sh lib/os.lib.sh lib/ctrl.lib.sh lib/cache.lib.sh lib/zbxapi.lib.sh lib/JSON.sh README.md; do
@@ -317,14 +326,15 @@ zaf_postconfigure() {
 if [ -f "${ZAF_CFG_FILE}" ]; then
 	. "${ZAF_CFG_FILE}"
 fi
-ZAF_TMP_DIR="/tmp/zaf-installer-tmp/"
+ZAF_TMP_DIR="/tmp/zaf-installer/"
+! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 
 # If debug is on, do not remove tmp dir 
 if [ "$ZAF_DEBUG" -le 3 ]; then
-	trap "rm -rif ${ZAF_TMP_DIR}" EXIT
-	trap "rm -rif /tmp/zaf-installer" EXIT
+	trap "rm -rf ${ZAF_TMP_DIR} " EXIT
+else
+	trap 'zaf_wrn "Leaving $ZAF_TMP_DIR" contents due to ZAF_DEBUG.' EXIT
 fi
-! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 
 case $1 in
 interactive)

@@ -218,6 +218,30 @@ zaf_list_plugin_items() {
 	echo
 }
 
+zaf_item_info() {
+	local plugin
+	local item
+
+	plugin=$(echo $1 | cut -d '.' -f 1)
+	item=$(echo $1 | cut -d '.' -f 2-)
+	if zaf_is_plugin $plugin; then
+		if zaf_ctrl_get_items <$ZAF_PLUGINS_DIR/$plugin/control.zaf | grep -wq "$item"; then
+			echo "Item $1:"
+			echo -n "Cache: "; zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Cache"; echo
+			echo "Parameters:"
+			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Parameters" ; echo
+			echo "Testparameters:"
+			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Testparameters" ; echo
+			echo "Precache:"
+			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Precache" ; echo
+		else
+			zaf_err "No such item $item."
+		fi	
+	else
+		zaf_err "No such plugin $plugin."
+	fi
+}
+
 zaf_list_items() {
 	for p in $(zaf_list_plugins); do
 		echo $p: $(zaf_list_plugin_items $p)
@@ -226,7 +250,7 @@ zaf_list_items() {
 
 zaf_get_item() {
 	if which zabbix_get >/dev/null; then
-		zaf_dbg zabbix_get -s localhost -k "'$1'"
+		zaf_trc zabbix_get -s localhost -k "'$1'"
 		(zabbix_get -s localhost -k "$1" | tr '\n' ' '; echo) || zaf_wrn "Cannot reach agent on localhost. Please localhost to Server list."
 		return 11
 	else
@@ -236,6 +260,7 @@ zaf_get_item() {
 }
 
 zaf_test_item() {
+	zaf_trc $ZAF_AGENT_BIN -t "'$1'"
 	if $ZAF_AGENT_BIN -t "$1" | grep ZBX_NOTSUPPORTED; then
 		return 1
 	else

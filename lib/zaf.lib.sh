@@ -11,17 +11,17 @@ zaf_msg() {
 	echo $@
 }
 zaf_trc() {
-	[ "$ZAF_DEBUG" -ge "3" ] && logger -p user.info -s -t zaf-trace -- $@
+	[ "$ZAF_DEBUG" -ge "3" ] && logger -p user.info ${ZAF_LOG_STDERR} -t zaf-trace -- $@
 }
 zaf_dbg() {
-	[ "$ZAF_DEBUG" -ge "2" ] && logger -p user.debug -s -t zaf-debug -- $@
+	[ "$ZAF_DEBUG" -ge "2" ] && logger -p user.debug ${ZAF_LOG_STDERR} -t zaf-debug -- $@
 }
 zaf_wrn() {
-	[ "$ZAF_DEBUG" -ge "1" ] && logger -p user.warn -s -t zaf-warning -- $@
+	[ "$ZAF_DEBUG" -ge "1" ] && logger -p user.warn ${ZAF_LOG_STDERR} -t zaf-warning -- $@
 }
 zaf_err() {
-	logger -s -p user.err -t zaf-error -- $@
-        logger -s -p user.err -t zaf-error "Exiting with error!"
+	logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error -- $@
+        logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error "Exiting with error!"
         exit 1
 }
 # Help option
@@ -41,6 +41,31 @@ zaf_hlp() {
 
 zaf_version(){
 	echo $ZAF_VERSION
+}
+
+# Add parameter for agent check
+# $1 parameter name (will be set to var)
+# $2 if nonempty, it is default value. If empty, parameter is mandatory
+# $3 if nonempty, regexp to test
+zaf_agentparm(){
+	local name
+	local default
+	local regexp
+
+	name="$1"
+	default="$2"
+	regexp="$3"
+	
+	[ -z "$value" ] && [ -z "$default" ] && zaf_err "$ITEM_KEY: Missing mandatory parameter $name."
+	if [ -z "$value" ]; then
+		value="$default"
+	else
+		if [ -n "$regexp" ]; then
+			echo "$value" | grep -qE "$regexp" ||  zaf_err "$ITEM_KEY: Bad parameter '$name' value '$value' (not in regexp '$regexp')."
+		fi
+	fi
+	eval $name=$value
+	zaf_trc "$ITEM_KEY: Param $name set to $value"
 }
 
 # Fetch url to stdout 
@@ -209,5 +234,16 @@ zaf_strescape() {
 # $1 seconds
 zaf_date_add() {
 	date -d "$1 seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -d "$(expr $(date +%s) + $1)" -D %s "+%Y-%m-%d %H:%M:%S"
+}
+
+# Create temp file and return its name
+# $1 prefix or empty
+zaf_tmpfile() {
+	echo "$ZAF_TMP_DIR/tmp$1"
+}
+
+# return random number
+zaf_random() {
+	hexdump -n 2 -e '/2 "%u"' /dev/urandom
 }
 
