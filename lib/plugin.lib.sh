@@ -197,23 +197,29 @@ zaf_list_plugin_items() {
 		p=$(zaf_ctrl_get_item_option $cfile $i "Parameters")
 		testparms=$(zaf_ctrl_get_item_option $cfile $i "Testparameters")
 		precache=$(zaf_ctrl_get_item_option $cfile $i "Precache")
-		if [ -n "$p" ]; then
-			if [ -n "$testparms" ] && [ "$2" = "test" ]; then
-				for tp in $testparms; do
+		case $2 in
+		test)
+			for tp in $testparms; do
+				if [ -n "$p" ]; then
 					echo -n "$1.$i[$tp] "
-				done
-			else
-				if [ -n "$precache" ] && [ "$2" = "precache" ]; then
-					for tp in $precache; do
-						echo -n "$1.$i[$tp] "
-					done
+				else
+					echo -n "$1.$i "
 				fi
-				[ "$2" != "test" ] && key="$1.$i[]"
+			done
+			;;
+		precache)
+			for tp in $precache; do
+				echo -n "$1.$i[$tp] "
+			done
+			;;
+		*)
+			if [ -n "$p" ]; then
+				echo -n "$1.$i[] "
+			else
+				echo -n "$1.$i "
 			fi
-		else
-			key="$1.$i"
-		fi
-		[ "$2" != "precache" ] && echo -n "$key "
+			;;
+		esac
 	done
 	echo
 }
