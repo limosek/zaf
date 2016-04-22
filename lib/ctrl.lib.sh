@@ -209,13 +209,14 @@ zaf_ctrl_generate_cfg() {
 		args=""
 		apos=1;
 		while read pname pdefault pregex prest; do
-			zafparams="$zafparams value=\"\$$apos\"; zaf_agentparm $pname $pdefault $pregex;"
+			zafparams="$zafparams value=\"\$$apos\"; zaf_agentparm $pname $pdefault $pregex; export $pname; "
 			args="$args \$$apos"
 			apos=$(expr $apos + 1)
 		done <$tmpfile
 	    else
 		ikey="$2.$i"
 	    fi
+	    env="export ITEM_KEY='$ikey'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
 	    lock=$(zaf_ctrl_get_item_option $1 $i "Lock")
 	    if [ -n "$lock" ]; then
 		lock="${ZAF_LIB_DIR}/zaflock $lock "
@@ -225,24 +226,18 @@ zaf_ctrl_generate_cfg() {
 		cache="${ZAF_LIB_DIR}/zafcache '$cache' "
 	    fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
-	    if [ -z "$cache" ] && [ -z "$lock" ]; then
-		preload="${ZAF_LIB_DIR}/preload.sh "
-	    else
-		preload=""
-	    fi
             if [ -n "$cmd" ]; then
-                printf "%s" "UserParameter=$ikey,export ITEM_KEY='$ikey'; ${preload}${cache}${lock}${cmd}"; echo
+                printf "%s" "UserParameter=$ikey,${env}${zafparams}${preload}${cache}${lock}${cmd} ${args}"; echo
                 continue
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
             if [ -n "$cmd" ]; then
                 ( echo "#!/bin/sh"
 		  echo ". $ZAF_LIB_DIR/preload.sh; "
-		  echo "$zafparams"
 		  zaf_ctrl_get_item_option $1 $i "Script"
 		  ) >${ZAF_TMP_DIR}/${iscript}.sh;
                 [ -z "$3" ] && zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-                printf "%s" "UserParameter=$ikey,export ITEM_KEY='$ikey'; ${preload}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args"; echo
+                printf "%s" "UserParameter=$ikey,${env}${preload}${zafparams}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh ${args}"; echo
                 continue;
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"
