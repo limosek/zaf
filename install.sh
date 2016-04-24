@@ -1,17 +1,6 @@
 #!/bin/sh
 
-[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
-export ZAF_LOG_STDERR="-s"
-if [ -z "$ZAF_URL" ]; then
-	# Runing as standalone install.sh. We have to download rest of files first.
-	ZAF_URL="https://github.com/limosek/zaf/"
-fi
-
-[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=1.2
-
-ZAF_TMP_DIR="/tmp/zaf-installer"
-ZAF_DIR="$ZAF_TMP_DIR/zaf"
-mkdir -p $ZAF_TMP_DIR
+############### Functions
 
 # Lite version of zaf_fetch_url, full version will be loaded later
 zaf_fetch_url(){
@@ -32,40 +21,6 @@ zaf_download_files() {
 	rm -rf $ZAF_DIR
 	zaf_fetch_url $ZAF_URL/archive/$ZAF_GITBRANCH.tar.gz | tar -f - -C $ZAF_TMP_DIR -zx && mv $ZAF_TMP_DIR/zaf-$ZAF_GITBRANCH $ZAF_DIR || zaf_err "Cannot download and unpack zaf!"
 }
-
-if ! [ -f README.md ]; then
-	# We are runing from stdin
-	if ! which curl >/dev/null;
-	then
-		zaf_err "Curl not found. Cannot continue. Please install it."
-	fi
-	echo "Installing from url $url..."
-	[ -z "$*" ] && auto=auto
-	zaf_download_files && cd $ZAF_DIR && exec ./install.sh $auto "$@"
-	echo "Error downloading and runing installer!" >&2
-	exit 2
-fi
-
-if ! type zaf_version >/dev/null; then
-. lib/zaf.lib.sh
-. lib/plugin.lib.sh
-. lib/os.lib.sh
-. lib/ctrl.lib.sh 
-. lib/cache.lib.sh 
-. lib/zbxapi.lib.sh 
-fi
-
-# Read options as config for ZAF
-for pair in "$@"; do
-    echo $pair | grep -q '^ZAF\_' || continue
-    option=$(echo $pair|cut -d '=' -f 1)
-    value=$(echo $pair|cut -d '=' -f 2-)
-    eval "C_${option}='$value'"
-    zaf_wrn "Overriding $option from cmdline."
-done
-
-[ -z "$ZAF_CFG_FILE" ] && ZAF_CFG_FILE=$INSTALL_PREFIX/etc/zaf.conf
-[ -n "$C_ZAF_DEBUG" ] && ZAF_DEBUG=$C_ZAF_DEBUG
 
 # Read option. If it is already set in zaf.conf, it is skipped. If env variable is set, it is used instead of default
 # It sets global variable name on result.
@@ -269,6 +224,9 @@ zaf_configure(){
 	zaf_set_option ZAF_AGENT_CONFIG "$ZAF_AGENT_CONFIG"
 	zaf_set_option ZAF_AGENT_CONFIGD "$ZAF_AGENT_CONFIGD"
 	zaf_set_option ZAF_AGENT_BIN "$ZAF_AGENT_BIN"
+	zaf_set_option ZAF_FILES_UID "$ZAF_FILES_UID"
+	zaf_set_option ZAF_FILES_GID "$ZAF_FILES_GID"
+	zaf_set_option ZAF_FILES_UMASK "$ZAF_FILES_UMASK"
 	zaf_set_option ZAF_AGENT_RESTART "$ZAF_AGENT_RESTART"
 	zaf_set_option ZAF_SUDOERSD "$ZAF_SUDOERSD"
 	zaf_set_option ZAF_CROND "$ZAF_CROND"
@@ -321,18 +279,59 @@ zaf_postconfigure() {
 	true
 }
 
+############ First stage Init
+
+if ! [ -f README.md ]; then
+	# We are runing from stdin
+	if ! which curl >/dev/null;
+	then
+		zaf_err "Curl not found. Cannot continue. Please install it."
+	fi
+	echo "Installing from url $url..."
+	[ -z "$*" ] && auto=auto
+	zaf_download_files && cd $ZAF_DIR && exec ./install.sh $auto "$@"
+	echo "Error downloading and runing installer!" >&2
+	exit 2
+fi
+
+# Try to load local downloaded libs
+if ! type zaf_version >/dev/null; then
+. lib/zaf.lib.sh
+. lib/plugin.lib.sh
+. lib/os.lib.sh
+. lib/ctrl.lib.sh 
+. lib/cache.lib.sh 
+. lib/zbxapi.lib.sh 
+fi
+# If something was wrong reading libs, then exit
+if ! type zaf_version >/dev/null; then
+	echo "Problem loading libraries?"
+	exit 2
+fi
+
+########### Second stage init (all functions loaded)
+
+[ -z "$ZAF_CFG_FILE" ] && ZAF_CFG_FILE=$INSTALL_PREFIX/etc/zaf.conf
 if [ -f "${ZAF_CFG_FILE}" ]; then
 	. "${ZAF_CFG_FILE}"
 fi
-ZAF_TMP_DIR="/tmp/zaf-installer/"
-! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
 
-# If debug is on, do not remove tmp dir 
-if [ "$ZAF_DEBUG" -le 3 ]; then
-	trap "rm -rf ${ZAF_TMP_DIR} " EXIT
-else
-	trap 'zaf_wrn "Leaving $ZAF_TMP_DIR" contents due to ZAF_DEBUG.' EXIT
-fi
+zaf_debug_init stderr
+
+ZAF_TMP_DIR="/tmp/zaf-installer"
+ZAF_DIR="$ZAF_TMP_DIR/zaf"
+zaf_tmp_init
+
+zaf_cache_init
+
+# Read options as config for ZAF
+for pair in "$@"; do
+    echo $pair | grep -q '^ZAF\_' || continue
+    option=$(echo $pair|cut -d '=' -f 1)
+    value=$(echo $pair|cut -d '=' -f 2-)
+    eval "C_${option}='$value'"
+    zaf_wrn "Overriding $option from cmdline."
+done
 
 case $1 in
 interactive)

@@ -9,26 +9,13 @@
 . ${ZAF_LIB_DIR}/zbxapi.lib.sh
 . ${ZAF_LIB_DIR}/cache.lib.sh
 
-[ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
-[ -z "$ZAF_TMP_DIR" ] && ZAF_TMP_DIR="${ZAF_TMP_BASE}-$(zaf_random)"
-[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}c
-
-rm -rf "${ZAF_TMP_DIR}"
-
-if ! [ -d "${ZAF_TMP_DIR}" ]; then
-	mkdir "${ZAF_TMP_DIR}"
+if ! type zaf_version >/dev/null; then
+	echo "Problem loading libraries?"
+	exit 2
 fi
-
-! [ -d "${ZAF_CACHE_DIR}" ] && mkdir "${ZAF_CACHE_DIR}"
-[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
-
-if [ "$ZAF_DEBUG" -le 3 ]; then
-	trap "rm -rf ${ZAF_TMP_DIR}" EXIT
-else
-	trap 'zaf_wrn "Leaving $ZAF_TMP_DIR" contents due to ZAF_DEBUG.' EXIT
-fi
-
-#trap 'touch /tmp/aaaa' ALARM
+zaf_debug_init
+zaf_tmp_init
+zaf_cache_init
 
 export ZAF_LIB_DIR
 export ZAF_TMP_DIR

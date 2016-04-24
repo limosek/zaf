@@ -43,30 +43,9 @@ else
 [ -f ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh ] && . ${ZAF_LIB_DIR}/zaf.${ZAF_OS}.sh
 fi
 
-[ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
-ZAF_TMP_DIR="${ZAF_TMP_BASE}-$(zaf_random)"
-[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}c
-
-[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
-export ZAF_DEBUG
-export ZAF_LOG_STDERR="-s"
-
-# If debug is on, do not remove tmp dir 
-if [ "$ZAF_DEBUG" -le 3 ]; then
-	trap "rm -rf ${ZAF_TMP_DIR}" EXIT
-else
-	trap 'zaf_wrn "Leaving $ZAF_TMP_DIR" contents due to ZAF_DEBUG.' EXIT
-fi
-
-! [ -d "${ZAF_TMP_DIR}" ] && mkdir "${ZAF_TMP_DIR}"
-if ! [ -d "${ZAF_CACHE_DIR}" ]; then
-	mkdir "${ZAF_CACHE_DIR}"
-fi
-
-if zaf_is_root; then
-	chgrp $(id -g zabbix) "${ZAF_CACHE_DIR}"
-	chmod 770 "${ZAF_CACHE_DIR}"
-fi
+zaf_debug_init stderr
+zaf_tmp_init
+zaf_cache_init
 
 case $1 in
 

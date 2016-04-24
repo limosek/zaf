@@ -21,6 +21,9 @@ zaf_configure_os_freebsd() {
 }
 
 zaf_detect_system() {
+	ZAF_FILES_UID=zabbix
+	ZAF_FILES_GID=zabbix
+	ZAF_FILES_UMASK=0770
 	if which dpkg >/dev/null; then
 		ZAF_PKG=dpkg
 		ZAF_OS=$(lsb_release -is|zaf_tolower)
