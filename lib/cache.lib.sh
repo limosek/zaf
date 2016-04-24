@@ -14,7 +14,7 @@ zaf_cache_init(){
 			zaf_trc "Cache: Removing stale entries"
 			(cd $ZAF_CACHE_DIR && find ./ -type f -name '*.info' -mmin +1 | \
 			while read line ; do
-				echo rm -f $line $(basename $line .info)
+				rm -f $line $(basename $line .info)
 			done 
 			)
 		else
