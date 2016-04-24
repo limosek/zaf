@@ -282,7 +282,14 @@ zaf_postconfigure() {
 ############ First stage Init
 
 if ! [ -f README.md ]; then
-	# We are runing from stdin
+	# Hardcoded variables
+	ZAF_VERSION="1.2"
+	ZAF_GITBRANCH="1.2"
+	ZAF_URL="https://github.com/limosek/zaf"
+	ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
+	export ZAF_TMP_DIR="/tmp/zaf-installer"
+	export ZAF_DIR="$ZAF_TMP_DIR/zaf"
+	mkdir -p $ZAF_TMP_DIR
 	if ! which curl >/dev/null;
 	then
 		zaf_err "Curl not found. Cannot continue. Please install it."
@@ -315,13 +322,11 @@ fi
 if [ -f "${ZAF_CFG_FILE}" ]; then
 	. "${ZAF_CFG_FILE}"
 fi
+export ZAF_TMP_DIR="/tmp/zaf-installer"
+export ZAF_DIR="$ZAF_TMP_DIR/zaf"
 
 zaf_debug_init stderr
-
-ZAF_TMP_DIR="/tmp/zaf-installer"
-ZAF_DIR="$ZAF_TMP_DIR/zaf"
 zaf_tmp_init
-
 zaf_cache_init
 
 # Read options as config for ZAF
