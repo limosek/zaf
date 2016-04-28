@@ -229,7 +229,7 @@ zaf_ctrl_generate_cfg() {
 	    fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
             if [ -n "$cmd" ]; then
-                printf "%s" "UserParameter=$ikey,${env}${zafparams}${preload}${cache}${lock}${cmd} ${args}"; echo
+                printf "%s" "UserParameter=$ikey,${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo
                 continue
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
