@@ -240,11 +240,13 @@ zaf_ctrl_generate_cfg() {
 		  ) >${ZAF_TMP_DIR}/${iscript}.sh;
                 [ -z "$3" ] && zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
                 printf "%s" "UserParameter=$ikey,${env}${preload}${zafparams}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh ${args}"; echo
+		rm -f ${ZAF_TMP_DIR}/${iscript}.sh
                 continue;
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"
 	done
 	) || zaf_err "Error during zaf_ctrl_generate_cfg"
+	rm -f $tmpfile
 }
 
 
