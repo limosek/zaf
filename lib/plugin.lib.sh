@@ -45,6 +45,7 @@ zaf_get_plugin_url() {
 # $1 - control
 zaf_plugin_info() {
 	local control="$1"
+	local items
 
 	! [ -f "$control" ] && zaf_err "Control file $control not found."
 	plugin=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Plugin)
@@ -62,9 +63,12 @@ zaf_plugin_info() {
 	[ -n "$phome" ] && echo "Home: $phome"
 	echo 
 	if zaf_is_plugin "$(basename $plugin)"; then
-		echo -n "Defined items: "; zaf_list_plugin_items $plugin
-		echo -n "Test items: "; zaf_list_plugin_items $plugin test
-		echo -n "Precache items: "; zaf_list_plugin_items $plugin precache
+		items=$(zaf_list_plugin_items $plugin)
+		[ -n "$items" ] && echo -n "Defined items: "; echo $items
+		items=$(zaf_list_plugin_items $plugin test)
+		[ -n "$items" ] && echo -n "Test items: "; echo $items
+		items=$(zaf_list_plugin_items $plugin precache)
+		[ -n "$items" ] && echo -n "Precache items: "; echo $items
 	else
 		echo "Items: $pitems"
 	fi
@@ -227,6 +231,7 @@ zaf_list_plugin_items() {
 zaf_item_info() {
 	local plugin
 	local item
+	local param
 
 	plugin=$(echo $1 | cut -d '.' -f 1)
 	item=$(echo $1 | cut -d '.' -f 2-)
@@ -237,9 +242,10 @@ zaf_item_info() {
 			echo "Parameters:"
 			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Parameters" ; echo
 			echo "Testparameters:"
-			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Testparameters" ; echo
+			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Testparameters"; echo
 			echo "Precache:"
-			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Precache" ; echo
+			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Precache"; echo
+			grep "UserParameter=$1" $ZAF_AGENT_CONFIGD/zaf_${plugin}.conf
 		else
 			zaf_err "No such item $item."
 		fi	

@@ -45,6 +45,11 @@ zaf_debug_init() {
 	[ -n "$1" ] && export ZAF_LOG_STDERR="-s"
 }
 
+zaf_tmp_init() {
+	[ -z "$ZAF_TMP_DIR" ] && ZAF_TMP_DIR=/tmp/
+	! [ -w "$ZAF_TMP_DIR" ] && zaf_err "Tmp dir $ZAF_TMP_DIR is not writable."
+}
+
 zaf_version(){
 	echo $ZAF_VERSION
 }
@@ -240,23 +245,6 @@ zaf_strescape() {
 # $1 seconds
 zaf_date_add() {
 	date -d "$1 seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -d "$(expr $(date +%s) + $1)" -D %s "+%Y-%m-%d %H:%M:%S"
-}
-
-zaf_tmp_init() {
-	[ -z "$ZAF_TMP_BASE" ] && ZAF_TMP_BASE=/tmp/zaf
-	ZAF_TMP_DIR="${ZAF_TMP_BASE}-$(zaf_random)"
-	mkdir -p $ZAF_TMP_DIR
-	if zaf_is_root; then
-		chown $ZAF_FILES_UID "$ZAF_TMP_DIR"
-		chgrp $ZAF_FILES_GID "$ZAF_TMP_DIR"
-		chmod $ZAF_FILES_UMASK "$ZAF_TMP_DIR"
-	fi
-	# If debug is on, do not remove tmp dir 
-	if [ "$ZAF_DEBUG" -le 3 ]; then
-		trap "rm -rf ${ZAF_TMP_DIR}" EXIT
-	else
-		trap 'zaf_wrn "Leaving $ZAF_TMP_DIR" contents due to ZAF_DEBUG.' EXIT
-	fi
 }
 
 # Create temp file and return its name

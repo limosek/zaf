@@ -180,7 +180,8 @@ zaf_configure(){
 	fi
 	zaf_get_option ZAF_GIT "Git is installed" "$ZAF_GIT" "$INSTALL_MODE"
 	zaf_get_option ZAF_CURL_INSECURE "Insecure curl (accept all certificates)" "1" "$INSTALL_MODE"
-	zaf_get_option ZAF_TMP_BASE "Tmp directory prefix (\$USER will be added)" "/tmp/zaf" "$INSTALL_MODE"
+	zaf_get_option ZAF_TMP_DIR "Tmp directory" "/tmp/" "$INSTALL_MODE"
+	zaf_get_option ZAF_CACHE_DIR "Cache directory" "/tmp/zafc" "$INSTALL_MODE"
 	zaf_get_option ZAF_LIB_DIR "Libraries directory" "/usr/lib/zaf" "$INSTALL_MODE"
         zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$INSTALL_MODE"
 	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$INSTALL_MODE"
@@ -214,7 +215,8 @@ zaf_configure(){
 	zaf_set_option ZAF_AGENT_PKG "${ZAF_AGENT_PKG}"
 	zaf_set_option ZAF_GIT "${ZAF_GIT}"
 	zaf_set_option ZAF_CURL_INSECURE "${ZAF_CURL_INSECURE}"
-	zaf_set_option ZAF_TMP_BASE "$ZAF_TMP_BASE"
+	zaf_set_option ZAF_TMP_DIR "$ZAF_TMP_DIR"
+	zaf_set_option ZAF_CACHE_DIR "$ZAF_CACHE_DIR"
 	zaf_set_option ZAF_LIB_DIR "$ZAF_LIB_DIR"
         zaf_set_option ZAF_BIN_DIR "$ZAF_BIN_DIR"
 	zaf_set_option ZAF_PLUGINS_DIR "$ZAF_PLUGINS_DIR"
@@ -240,6 +242,17 @@ zaf_configure(){
         	zaf_configure_agent $ZAF_AGENT_OPTIONS "$@"
 		zaf_add_agent_option "Include" "$ZAF_AGENT_CONFIGD"
 	fi
+
+	if ! [ -d $ZAF_CACHE_DIR ]; then
+		mkdir -p "$ZAF_CACHE_DIR"
+		if zaf_is_root && [ -n "$ZAF_FILES_UID" ] && [ -n "$ZAF_FILES_GID" ]; then
+			zaf_wrn "Cache: Changing perms to $ZAF_CACHE_DIR (zabbix/$ZAF_ZABBIX_GID/0770)"
+			chown $ZAF_FILES_UID "$ZAF_CACHE_DIR"
+			chgrp $ZAF_FILES_GID "$ZAF_CACHE_DIR"
+			chmod $ZAF_FILES_UMASK "$ZAF_CACHE_DIR"
+		fi
+	fi
+	zaf_cache_init
 }
 
 zaf_install_all() {
@@ -327,7 +340,6 @@ export ZAF_DIR="$ZAF_TMP_DIR/zaf"
 
 zaf_debug_init stderr
 zaf_tmp_init
-zaf_cache_init
 
 # Read options as config for ZAF
 for pair in "$@"; do
@@ -337,6 +349,7 @@ for pair in "$@"; do
     eval "C_${option}='$value'"
     zaf_wrn "Overriding $option from cmdline."
 done
+[ -z "$C_ZAF_TMP_DIR" ] && C_ZAF_TMP_DIR="/tmp/"
 
 case $1 in
 interactive)

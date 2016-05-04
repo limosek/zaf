@@ -1,36 +1,29 @@
 # Zaf cache related functions
 
 zaf_cache_init(){
-	[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_BASE}c
-	if [ -n "$ZAF_CACHE_DIR" ]; then
-		mkdir -p "$ZAF_CACHE_DIR"
-		if zaf_is_root; then
-			zaf_trc "Cache: Changing perms to $ZAF_CACHE_DIR (zabbix/$ZAF_ZABBIX_GID/0770)"
-			chown $ZAF_FILES_UID "$ZAF_CACHE_DIR"
-			chgrp $ZAF_FILES_GID "$ZAF_CACHE_DIR"
-			chmod $ZAF_FILES_UMASK "$ZAF_CACHE_DIR"
-		fi
-		if [ -w $ZAF_CACHE_DIR ]; then
-			zaf_trc "Cache: Removing stale entries"
-			(cd $ZAF_CACHE_DIR && find ./ -type f -name '*.info' -mmin +1 | \
-			while read line ; do
-				rm -f $line $(basename $line .info)
-			done 
-			)
-		else
-			zaf_err "Cache dir is not accessible! Become root or member of $ZAF_FILES_GID group!"
-		fi
+	[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_DIR}/zafc
+	if [ -w $ZAF_CACHE_DIR ]; then
+		zaf_trc "Cache: Removing stale entries"
+		(cd $ZAF_CACHE_DIR && find ./ -type f -name '*.info' -mmin +1 2>/dev/null | \
+		while read line ; do
+			rm -f $line $(basename $line .info)
+		done 
+		)
 	else
-		zaf_err "Cache dir not set."
+		zaf_dbg "Cache dir $ZAF_CACHE_DIR is not accessible! Disabling cache."
 	fi
 }
 
 zaf_cache_clean(){
 	if [ -n "$ZAF_CACHE_DIR" ]; then
 		zaf_wrn "Removing cache entries"
-		rm -rf "$ZAF_CACHE_DIR"
+		(cd $ZAF_CACHE_DIR && find ./ -type f -name '*.info' 2>/dev/null | \
+		while read line ; do
+			rm -f $line $(basename $line .info)
+		done 
+		)
 	else
-		zaf_err "Cache dir not set."
+		zaf_dbg "Cache dir not set. Disabling cache."
 	fi
 	zaf_cache_init
 }
