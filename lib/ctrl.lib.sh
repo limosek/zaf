@@ -218,7 +218,7 @@ zaf_ctrl_generate_cfg() {
 		zafparams=""
 		args=""
 	    fi
-	    env="export ITEM_KEY='$ikey'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
+	    env="export ITEM_KEY='$ikey'; export PLUGIN='$2'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
 	    lock=$(zaf_ctrl_get_item_option $1 $i "Lock")
 	    if [ -n "$lock" ]; then
 		lock="${ZAF_LIB_DIR}/zaflock $lock "

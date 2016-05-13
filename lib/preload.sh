@@ -9,6 +9,9 @@
 . ${ZAF_LIB_DIR}/zbxapi.lib.sh
 . ${ZAF_LIB_DIR}/cache.lib.sh
 
+# Plugin specific functions if exists
+[ -f ./functions.sh ] && . ./functions.sh
+
 if ! type zaf_version >/dev/null; then
 	echo "Problem loading libraries?"
 	exit 2
@@ -23,7 +26,7 @@ export ZAF_CACHE_DIR
 export ZAF_PLUGINS_DIR
 export ZAF_DEBUG
 unset ZAF_LOG_STDERR
-export PATH=$ZAF_LIB_DIR:$ZAF_BIN_DIR:$PATH
+export PATH
 
 if [ "$(basename $0)" = "preload.sh" ] && [ -n "$*" ]; then
 	tmpf=$(zaf_tmpfile preload)

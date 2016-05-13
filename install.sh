@@ -338,6 +338,7 @@ fi
 export ZAF_TMP_DIR="/tmp/zaf-installer"
 export ZAF_DIR="$ZAF_TMP_DIR/zaf"
 
+! [ -d $ZAF_TMP_DIR ] && mkdir -p $ZAF_TMP_DIR
 zaf_debug_init stderr
 zaf_tmp_init
 

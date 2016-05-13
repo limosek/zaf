@@ -258,3 +258,12 @@ zaf_random() {
 	hexdump -n 2 -e '/2 "%u"' /dev/urandom
 }
 
+# Emulate sudo
+zaf_sudo() {
+	if zaf_is_root || ! which sudo >/dev/null 2>/dev/null; then
+		$@
+	else
+		sudo $@
+	fi
+}
+
