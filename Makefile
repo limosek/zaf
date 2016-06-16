@@ -5,6 +5,7 @@ ZAF_EXPORT_OPTS=$(foreach o,$(ZAF_OPTIONS),$(shell echo $(o)|cut -d '=' -f 1))
 DEBIAN_DIR=tmp/deb
 DEBIAN_CTRL=$(DEBIAN_DIR)/DEBIAN
 DEBIAN_PKG=$(shell . lib/zaf.lib.sh; echo out/zaf-$$ZAF_VERSION.deb)
+ARCH_DIR=archlinux
 ifeq ($(ZAF_DEBUG),)
  ZAF_DEBUG=0
 endif
@@ -24,9 +25,14 @@ help:
 	@echo IPLUGINS will be downloaded and installed after package is installed. Can be name or url accessible after package installation.
 	@echo
 
-deb:	$(DEBIAN_PKG)
+deb:
+	$(DEBIAN_PKG)
 
-$(DEBIAN_PKG): deb-clean deb-init deb-deps deb-control deb-scripts deb-cp deb-package
+arch:
+	$(ARCH_PKG)
+
+$(DEBIAN_PKG):	deb-clean deb-init deb-deps deb-control deb-scripts deb-cp deb-package
+$(ARCH_PKG):	arch-clean arch-build
 
 clean:
 	@rm -rf tmp/* out/*
@@ -88,4 +94,9 @@ deb-package:
 	@echo PLUGINS in postinst: $(IPLUGINS)
 	@echo
 
-	
+arch-clean:
+	@cd $(ARCH_DIR)
+	git clean -ffdx
+
+arch-build:
+	@cd $(ARCH_DIR) && makepkg -f
