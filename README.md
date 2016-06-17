@@ -28,18 +28,18 @@ So zaf is here for you :)
 ## Installing Zaf
 You need to be root and you must have curl installed on your system. Depending on your system, github certificates may not be available so you have to use *-k* option for curl (insecure). Default installation type is silent. So there will be no questions and everything will be autodetected. This simple command should be used on most systems:
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | sh
+curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
 ```
 
 ### Install options and autoconfiguration
 General parameters for install.sh on any system (simplest way how to install)
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | \
+curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | \
    sh -s {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Server-Options] [Zaf-Options]
 ```
 or use git version:
 ```
-git clone https://github.com/limosek/zaf.git; cd zaf; git checkout 1.3
+git clone https://github.com/limosek/zaf.git; cd zaf; git checkout master
 
 ./install.sh {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Server-Options] [Zaf-Options]
  Agent-Options: Z_Option=value [...]
@@ -72,7 +72,7 @@ Now everything was tested on Debian and OpenWrt. If somebody is interrested in, 
 Suppose you want to autoinstall agent on clean system. You need only curl installed. Everything else is one-cmd process.
 This command will install zaf, install zabbix-agent if necessary and sets zabbix variables on agent to reach server. This command can be automatized by puppet or another deploying system.
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | sh -s auto \
+curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s auto \
   Z_Server=zabbix.server.local \
   Z_ServerActive=zabbix.server.local \
   Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 \
@@ -84,7 +84,7 @@ You can make your own deb package with preconfigured option. It is up to you to 
 ```
 git clone https://github.com/limosek/zaf.git \
  && cd zaf \
- && git checkout 1.3 \
+ && git checkout master \
  && git clone https://github.com/limosek/zaf-plugins.git \
  && make deb PLUGINS="./zaf-plugins/fsx" IPLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
 sudo dpkg -i out/zaf-1.3master.deb

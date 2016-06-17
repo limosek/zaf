@@ -372,8 +372,7 @@ zaf_postconfigure() {
 
 if ! [ -f README.md ]; then
 	# Hardcoded variables
-	ZAF_VERSION="1.2"
-	ZAF_GITBRANCH="1.2"
+	ZAF_VERSION="1.3"
 	ZAF_URL="https://github.com/limosek/zaf"
 	ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 	export ZAF_TMP_DIR="/tmp/zaf-installer"
