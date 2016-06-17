@@ -109,54 +109,73 @@ zaf_set_option(){
 	fi
 }
 
-# Set config option in zabbix agent config file
-# $1 option
-# $2 value
-zaf_set_agent_option() {
-	local option="$1"
-	local value="$2"
-	if grep -q ^$option\= $ZAF_AGENT_CONFIG; then
-		zaf_dbg "Setting option $option in $ZAF_AGENT_CONFIG."
-		sed -i "s/$option=\(.*\)/$option=$2/" $ZAF_AGENT_CONFIG
+# Set config option in zabbix config file
+# $1 config file
+# $2 option
+# $3 value
+zaf_set_zabbix_option() {
+	local cfgfile="$1"
+	local option="$2"
+	local value="$3"
+	if grep -q ^$option\= $cfgfile; then
+		zaf_dbg "Setting option $option in $cfgfile."
+		sed -i "s/$option=\(.*\)/$option=$2/" $cfgfile
 	else
-		 zaf_move_agent_option "$1" "$2"
+		 zaf_move_zabbix_option "$1" "$2" "$3"
 	fi
 }
 
-# Unset config option in zabbix agent config file
-# $1 option
-zaf_unset_agent_option() {
-	local option="$1"
-	local value="$2"
-	if grep -q ^$option\= $ZAF_AGENT_CONFIG; then
-		zaf_dbg "Unsetting option $option in $ZAF_AGENT_CONFIG."
-		sed -i "s/$option=\(.*\)/#$option=$2/" $ZAF_AGENT_CONFIG
+# Get config option from zabbix config file
+# $1 config file
+# $2 option
+zaf_get_zabbix_option() {
+	local cfgfile="$1"
+	local option="$2"
+	grep ^$option\= $cfgfile | cut -d '=' -f 2-;
+}
+
+# Unset config option in zabbix config file
+# $1 config file
+# $2 option
+zaf_unset_zabbix_option() {
+	local cfgfile="$1"
+	local option="$2"
+	local value="$3"
+	if grep -q ^$option\= $cfgfile; then
+		zaf_dbg "Unsetting option $option in $cfgfile."
+		sed -i "s/$option=\(.*\)/#$option=$2/" $cfgfile
 	fi
 }
 
-# Add config option in zabbix agent  config file
-# $1 option
-# $2 value
-zaf_add_agent_option() {
-	local option="$1"
-	local value="$2"
-	if ! grep -q "^$1=$2" $ZAF_AGENT_CONFIG; then
-		zaf_dbg "Adding option $option to $ZAF_AGENT_CONFIG."
-		echo "$option=$value" >>$ZAF_AGENT_CONFIG
+# Add config option in zabbix config file
+# $1 config file
+# $2 option
+# $3 value
+zaf_add_zabbix_option() {
+	local cfgfile="$1"
+	local option="$2"
+	local value="$3"
+	if ! grep -q "^$option=$value" $cfgfile; then
+		zaf_dbg "Adding option $option to $cfgfile."
+		echo "$option=$value" >>$cfgfile
 	fi
 }
 
-# Move config option fron zabbix agent config file to zaf options file and set value
-# $1 option
-# $2 value
-zaf_move_agent_option() {
-	local option="$1"
-	local value="$2"
-	if grep -q ^$option\= $ZAF_AGENT_CONFIG; then
-		zaf_dbg "Moving option $option from $ZAF_AGENT_CONFIG to ."
-		sed -i "s/$option=(.*)/$option=$2/" $ZAF_AGENT_CONFIG
+# Move config option fron zabbix config file to zaf options file and set value
+# $1 config file
+# $2 options file
+# $3 option
+# $4 value
+zaf_move_zabbix_option() {
+	local cfgfile="$1"
+	local optsfile="$2"
+	local option="$3"
+	local value="$4"
+	if grep -q ^$option\= $cfgfile; then
+		zaf_dbg "Moving option $option from $cfgfile to $optsfile."
+		sed -i "s/$option=(.*)/$option=$value/" $cfgfile
 	fi
-	[ -n "$value" ] && echo "$option=$value" >> "$ZAF_AGENT_CONFIGD/zaf_options.conf"
+	[ -n "$value" ] && echo "$option=$value" >> "$optsfile"
 }
 
 # Automaticaly configure agent if supported
@@ -166,6 +185,7 @@ zaf_configure_agent() {
 	local option
 	local value
 	local options
+	local changes
 
         zaf_install_dir "$ZAF_AGENT_CONFIGD"
 	echo -n >"$ZAF_AGENT_CONFIGD/zaf_options.conf" || zaf_err "Cannot access $ZAF_AGENT_CONFIGD/zaf_options.conf"
@@ -175,14 +195,44 @@ zaf_configure_agent() {
 		option=$(echo $pair|cut -d '=' -f 1|cut -d '_' -f 2)
 		value=$(echo $pair|cut -d '=' -f 2-)
 		if [ -n "$value" ]; then
-			zaf_set_agent_option "$option" "$value"
+			zaf_set_zabbix_option "$ZAF_AGENT_CONFIG" "$option" "$value"
 		else
-			zaf_unset_agent_option "$option"
+			zaf_unset_zabbix_option "$ZAF_AGENT_CONFIG" "$option"
 		fi
 		options="$options Z_$option=$value"
+		changes=1
 	done
 	zaf_set_option ZAF_AGENT_OPTIONS "${options}"
+	[ -n "$changes" ] # Return false if no changes
 }
+
+# Automaticaly configure server if supported
+# Parameters are in format S_zabbixconfvar=value
+zaf_configure_server() {
+	local pair
+	local option
+	local value
+	local options
+	local changes
+
+        zaf_install_dir "$ZAF_SERVER_CONFIGD"
+	echo -n >"$ZAF_SERVER_CONFIGD/zaf_options.conf" || zaf_err "Cannot access $ZAF_SERVER_CONFIGD/zaf_options.conf"
+	for pair in "$@"; do
+		echo $pair | grep -q '^S\_' || continue # Skip non S_ vars
+		option=$(echo $pair|cut -d '=' -f 1|cut -d '_' -f 2)
+		value=$(echo $pair|cut -d '=' -f 2-)
+		if [ -n "$value" ]; then
+			zaf_set_zabbix_option "$ZAF_SERVER_CONFIG" "$option" "$value"
+		else
+			zaf_unset_zabbix_option "$ZAF_SERVER_CONFIG" "$option"
+		fi
+		options="$options S_$option=$value"
+		changes=1
+	done
+	zaf_set_option ZAF_SERVER_OPTIONS "${options}"
+	[ -n "$changes" ] # Return false if no changes
+}
+
 
 zaf_preconfigure(){
 	zaf_detect_system 
@@ -222,11 +272,18 @@ zaf_configure(){
 	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_REPO_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$INSTALL_MODE"
 	zaf_get_option ZAF_REPO_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$INSTALL_MODE"
 	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$INSTALL_MODE"
+
 	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$INSTALL_MODE"
 	! [ -d "${ZAF_AGENT_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_agentd.d" ] && ZAF_AGENT_CONFIGD="/etc/zabbix/zabbix_agentd.d"
 	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$INSTALL_MODE"
+
+	zaf_get_option ZAF_SERVER_CONFIG "Zabbix server config" "/etc/zabbix/zabbix_server.conf" "$INSTALL_MODE"
+	! [ -d "${ZAF_SERVER_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_server.d" ] && ZAF_SERVER_CONFIGD="/etc/zabbix/zabbix_server.d"
+	zaf_get_option ZAF_SERVER_CONFIGD "Zabbix server config.d" "/etc/zabbix/zabbix_server.conf.d/" "$INSTALL_MODE"
+	zaf_get_option ZAF_SERVER_BIN "Zabbix server binary" "/usr/sbin/zabbix_server" "$INSTALL_MODE"
+	
 	zaf_get_option ZAF_SUDOERSD "Sudo sudoers.d directory" "/etc/sudoers.d" "$INSTALL_MODE"
 	zaf_get_option ZAF_CROND "Cron.d directory" "/etc/cron.d" "$INSTALL_MODE"
 	zaf_get_option ZAF_ZBXAPI_URL "Zabbix API url" "http://localhost/zabbix/api_jsonrpc.php" "$INSTALL_MODE"
@@ -260,6 +317,12 @@ zaf_configure(){
 	zaf_set_option ZAF_AGENT_CONFIGD "$ZAF_AGENT_CONFIGD"
 	zaf_set_option ZAF_AGENT_BIN "$ZAF_AGENT_BIN"
 	zaf_set_option ZAF_AGENT_RESTART "$ZAF_AGENT_RESTART"
+	if [ -f $ZABBIX_SERVER_BIN ]; then
+		zaf_set_option ZAF_SERVER_CONFIG "$ZAF_SERVER_CONFIG"
+		zaf_set_option ZAF_SERVER_CONFIGD "$ZAF_SERVER_CONFIGD"
+		zaf_set_option ZAF_SERVER_EXTSCRIPTS "$(zaf_get_zabbix_option $ZAF_SERVER_CONFIG ExternalScripts)"
+	fi
+	zaf_set_option ZAF_SERVER_BIN "$ZAF_SERVER_BIN"
 	zaf_set_option ZAF_SUDOERSD "$ZAF_SUDOERSD"
 	zaf_set_option ZAF_CROND "$ZAF_CROND"
 	zaf_set_option ZAF_ZBXAPI_URL "$ZAF_ZBXAPI_URL"
@@ -270,7 +333,12 @@ zaf_configure(){
 
 	if zaf_is_root; then
         	zaf_configure_agent $ZAF_AGENT_OPTIONS "$@"
-		zaf_add_agent_option "Include" "$ZAF_AGENT_CONFIGD"
+		zaf_add_zabbix_option "$ZAF_AGENT_CONFIG" "Include" "$ZAF_AGENT_CONFIGD"
+		if [ -f "$ZAF_SERVER_BIN" ]; then
+			zaf_configure_server $ZAF_SERVER_OPTIONS "$@" && zaf_add_zabbix_option "$ZAF_SERVER_CONFIG" "Include" "$ZAF_SERVER_CONFIGD"
+		else
+			zaf_wrn "Skipping server config. Zabbix server binary '$ZAF_SERVER_BIN' not found."
+		fi
 	fi
 }
 
@@ -388,6 +456,7 @@ install)
 	echo "install.sh {auto|interactive|debug-auto|debug-interactive|reconf} [Agent-Options] [Zaf-Options]"
         echo "scratch means that config file will be created from scratch"
         echo " Agent-Options: Z_Option=value [...]"
+	echo " Server-Options: S_Option=value [...]"
         echo " Zaf-Options: ZAF_OPT=value [...]"
 	echo " To unset Agent-Option use Z_Option=''"
         echo 

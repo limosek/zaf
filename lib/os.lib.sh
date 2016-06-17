@@ -130,7 +130,7 @@ zaf_install_agent_opkg() {
 # $* - packages
 zaf_check_deps_dpkg() {
 	for i in $*; do
-		dpkg-query -f '${Status},${Package}\n' -W $* 2>/dev/null | grep -q "^install ok" 
+		dpkg-query -f '${db:Status-Status},${Package}\n' -W $* 2>/dev/null | grep -q "^installed" 
 	done
 }
 

@@ -5,6 +5,25 @@ zaf_ctrl_get_items() {
 	grep '^Item ' | cut -d ' ' -f 2 | cut -d ':' -f 1 | tr '\r\n' ' '
 }
 
+# Get external item list from control on stdin
+zaf_ctrl_get_extitems() {
+	grep '^ExtItem ' | cut -d ' ' -f 2 | cut -d ':' -f 1 | tr '\r\n' ' '
+}
+
+# Get external item body from stdin
+# $1 itemname
+zaf_ctrl_get_extitem_block() {
+	grep -v '^#' | awk '/^ExtItem '$1'/ { i=0;
+	while (i==0) {
+		getline;
+		if (/^\/ExtItem/) exit;
+		print $0;
+	}};
+	END {
+		exit i==0;
+	}'
+}
+
 # Get item body from stdin
 # $1 itemname
 zaf_ctrl_get_item_block() {
@@ -19,13 +38,14 @@ zaf_ctrl_get_item_block() {
 	}'
 }
 
+
 # Get global plugin block body from stdin
 # $1 itemname
 zaf_ctrl_get_global_block() {
 	grep -v '^#' | awk '{ i=0; print $0;
 	while (i==0) {
 		getline;
-		if (/^Item /) exit;
+		if (/^(Item |ExtItem)/) exit;
 		print $0;
 	}}'
 }
@@ -33,7 +53,7 @@ zaf_ctrl_get_global_block() {
 # Get item multiline option
 # $1 optionname
 zaf_block_get_moption() {
-	awk '/^'$1'::$/ { i=0; print $0;
+	awk '/^'$1'::$/ { i=0; 
 	while (i==0) {
 		getline;
 		if (/^::$/) {i=1; continue;};
@@ -68,6 +88,7 @@ zaf_ctrl_get_global_option() {
 		|| zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
 	fi
 }
+
 # Get item specific option (single or multiline)
 # $1 - control file
 # $2 - item name
@@ -87,10 +108,30 @@ zaf_ctrl_get_item_option() {
 	fi
 }
 
+# Get external item specific option (single or multiline)
+# $1 - control file
+# $2 - item name
+# $3 - option name
+zaf_ctrl_get_extitem_option() {
+	local ctrlvar
+	local ctrlopt
+
+	ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
+	eval ctrlvar=\$$ctrlopt
+	if [ -n "$ctrlvar" ]; then
+		zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
+		echo $ctrlopt
+	else
+		zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_moption "$3" \
+		|| zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_option "$3"
+	fi
+}
+
 # Check dependencies based on control file
 zaf_ctrl_check_deps() {
 	local deps
 	deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-${ZAF_PKG}" )
+
 	if ! zaf_os_specific zaf_check_deps $deps; then
 		zaf_err "Missing one of dependend system packages: $deps"
 	fi
@@ -178,10 +219,10 @@ zaf_ctrl_install() {
 	) || zaf_err "Error during zaf_ctrl_install"
 }
 
-# Generates zabbix cfg from control file
+# Generates zabbix items cfg from control file
 # $1 control
 # $2 pluginname
-zaf_ctrl_generate_cfg() {
+zaf_ctrl_generate_items_cfg() {
 	local items
 	local cmd
 	local iscript
@@ -229,7 +270,60 @@ zaf_ctrl_generate_cfg() {
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"
 	done
-	) || zaf_err "Error during zaf_ctrl_generate_cfg"
+	) || zaf_err "Error during zaf_ctrl_generate_items_cfg"
 }
 
+# Generates zabbix cfg for external items from control file
+# $1 control
+# $2 pluginname
+zaf_ctrl_generate_extitems_cfg() {
+	local items
+	local cmd
+	local iscript
+	local ikey
+	local lock
+	local cache
+
+	items=$(zaf_ctrl_get_extitems <"$1")
+	if [ -n "$items" ] && [ -z "${ZAF_SERVER_EXTSCRIPTS}" ] || ! [ -d "${ZAF_SERVER_EXTSCRIPTS}" ]; then
+		zaf_err "Zabbix server external scripts directory '${ZAF_SERVER_EXTSCRIPTS}' unknown. Cannot add external item." 
+	fi
+	(set -e
+	for i in $items; do
+            iscript=$(zaf_stripctrl $i)
+	    params=$(zaf_ctrl_get_extitem_option $1 $i "Parameters")
+	    ikey="$2.$i"
+	    if [ -n "$params" ]; then
+		args=""
+		apos=1;
+		for p in $params; do
+			args="$args \$$apos"
+			apos=$(expr $apos + 1)
+		done
+	    fi
+	    lock=$(zaf_ctrl_get_extitem_option $1 $i "Lock")
+	    if [ -n "$lock" ]; then
+		lock="${ZAF_LIB_DIR}/zaflock $lock "
+	    fi
+	    cache=$(zaf_ctrl_get_extitem_option $1 $i "Cache")
+	    if [ -n "$cache" ]; then
+		cache="_cache '$cache' "
+	    fi
+            cmd=$(zaf_ctrl_get_extitem_option $1 $i "Cmd")
+            if [ -n "$cmd" ]; then
+                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock$cmd";
+                continue
+            fi
+            cmd=$(zaf_ctrl_get_extitem_option $1 $i "Script")
+            if [ -n "$cmd" ]; then
+                zaf_ctrl_get_extitem_option $1 $i "Script" >${ZAF_TMP_DIR}/${iscript}.sh;
+                zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
+                $(which echo) -e "#!/bin/sh\n${ZAF_LIB_DIR}/preload.sh $cache $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args" >${ZAF_SERVER_EXTSCRIPTS}/$ikey;
+		chmod +x ${ZAF_SERVER_EXTSCRIPTS}/$ikey
+                continue;
+            fi
+	    zaf_err "External item $i declared in control file but has no Cmd, Function or Script!"
+	done
+	) || zaf_err "Error during zaf_ctrl_generate_items_cfg"
+}
 

@@ -299,8 +299,9 @@ zaf_install_plugin() {
 			zaf_ctrl_install "$url" "${control}" "${plugindir}"
 			zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_cron "$plugin" "${control}" "${plugindir}"
-			zaf_ctrl_generate_cfg "${control}" "${plugin}" \
+			zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+			zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}"
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 		else
 			zaf_err "Cannot install plugin '$plugin' to $plugindir!"

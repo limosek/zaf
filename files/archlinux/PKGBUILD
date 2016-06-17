@@ -34,5 +34,6 @@ package() {
     cd "$srcdir/$pkgname"
 
     INSTALL_PREFIX="$pkgdir" \
-        ./install.sh auto
+        ./install.sh auto {ZAF_OPTIONS} {AGENT_OPTIONS}
 }
+
