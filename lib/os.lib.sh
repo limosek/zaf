@@ -1,12 +1,15 @@
 # Os related functions
 
 zaf_configure_os_openwrt() {
-    ZAF_AGENT_RESTART="/etc/init.d/zabbix_agentd restart"
+    ZAF_AGENT_RESTART="zaf agent-config ; /etc/init.d/zabbix_agentd restart"
     ZAF_AGENT_CONFIGD="/var/run/zabbix_agentd.conf.d/"
     ZAF_AGENT_CONFIG="/etc/zabbix_agentd.conf"
     ZAF_AGENT_PKG="zabbix-agentd"
     ZAF_CURL_INSECURE=1
 }
+zaf_configure_os_beesip() {
+   zaf_configure_os_openwrt
+} 
 
 zaf_configure_os_freebsd() {
     ZAF_AGENT_PKG="zabbix3-agent"
@@ -14,9 +17,13 @@ zaf_configure_os_freebsd() {
     ZAF_AGENT_CONFIGD="/usr/local/etc/zabbix3/zabbix_agentd.conf.d/"
     ZAF_AGENT_BIN="/usr/local/sbin/zabbix_agentd"
     ZAF_AGENT_RESTART="service zabbix_agentd restart"
+    ZAF_SUDOERSD="/usr/local/etc/sudoers.d"
 }
 
 zaf_detect_system() {
+	ZAF_FILES_UID=zabbix
+	ZAF_FILES_GID=zabbix
+	ZAF_FILES_UMASK=0770
 	if which dpkg >/dev/null; then
 		ZAF_PKG=dpkg
 		ZAF_OS=$(lsb_release -is|zaf_tolower)

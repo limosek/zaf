@@ -1,13 +1,15 @@
-# Zabbix Agent Framework
+# Zabbix (Agent) Framework
 
 This tool is used to maintain external zabbix checks in *one place*. There are lot of places where it is possible to download many external checks. 
 But there is problem with installation, update and centralised management. This tool should do all of this in easy steps. In future it can be *starting point* to
 install and configure zabbix agent on systems with one step. Primary goal is not to make all plugins available here but to be able to use any plugin and decentralized development.
-If you are maintainer of some external check, it is enough to create zaf file in  your repo and use zaf installer everywhere.
+If you are maintainer of some external check, it is enough to create zaf file in  your repo and use zaf installer everywhere. 
+
+Next to this, this tool can even communicate with Zabbix API with *NO dependencies* to high level languages. Shell, sed and awk only.
 
 ## Motivation
 
-Did you install lot of zabbix agents and try to setup similar common user parameters? Do you want to setup them all? Do you want to change some zabbix agent options on lot of system? Do you want to write your own simple check or discovery rule for zabbix and it is nightmare to deploy same script on more zabbix agents? Are you tired searching some system specific agent check and setup them individualy?
+Did you install lot of zabbix agents and try to setup similar common user parameters? Do you want to setup them all? Do you want to change some zabbix agent options on lot of system? Do you want to write your own simple check or discovery rule for zabbix and it is nightmare to deploy same script on more zabbix agents? Are you tired searching some system specific agent check and setup them individualy? Do you want to auto simple backup all hosts in your zabbix to xml files? Or do you want to do some scripting on host depending on Zabbix server configuration?
 So zaf is here for you :)
 
 ## Features
@@ -21,6 +23,7 @@ So zaf is here for you :)
 * Zabbix discovery simplification. Creating zabbix item for discovery is not so easy in shell based system and result is not nice. But you can use framework function to do so.
 * Zabbix agent autoinstallation and autoconfiguration suitable to use in puppet or another tool 
 * OS packaging support
+* Zabbix API support
 
 ## Installing Zaf
 You need to be root and you must have curl installed on your system. Depending on your system, github certificates may not be available so you have to use *-k* option for curl (insecure). Default installation type is silent. So there will be no questions and everything will be autodetected. This simple command should be used on most systems:
@@ -32,13 +35,15 @@ curl -k https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | sh
 General parameters for install.sh on any system (simplest way how to install)
 ```
 curl -k https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | \
-   sh -s {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Zaf-Options]
+   sh -s {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Server-Options] [Zaf-Options]
 ```
 or use git version:
 ```
 git clone https://github.com/limosek/zaf.git; cd zaf; git checkout 1.3
-./install.sh {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Zaf-Options]
+
+./install.sh {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Server-Options] [Zaf-Options]
  Agent-Options: Z_Option=value [...]
+ Server-Options: S_Option=value [...]
  Zaf-Options: ZAF_OPT=value [...]
  To unset Agent-Option use Z_Option=''
 ```
@@ -126,37 +131,50 @@ Zaf binary can be installed on any system from openwrt to big system. It has min
 ./zaf 
 ./zaf Version 1.3master. Please use some of this commands:
 ./zaf Cmd [ZAF_OPTION=value] [ZAF_CTRL_Option=value] [ZAF_CTRLI_Item_Option=value] ...
-Commands:
-./zaf update			To update repo (not plugins, similar to apt-get update)
-./zaf upgrade		To upgrade installed plugins from repo
-./zaf plugins		To list installed plugins
-./zaf show [plugin]		To show installed plugins or plugin info
-./zaf items [plugin]		To list all suported items [for plugin]
-./zaf test [plugin[.item]]	To test [all] suported items by zabbix_agentd [for plugin]
-./zaf get [plugin[.item]]	To test [all] suported items by zabbix_get [for plugin]
-./zaf precache [plugin[.item]]	To precache [all] suported items
-./zaf install plugin		To install plugin
-./zaf remove plugin		To remove plugin
-./zaf api			To zabbix API functions. See ./zaf api for more info.
-./zaf userparms		See userparms generated from zaf on stdout
-./zaf agent-config		Reconfigure zabbix userparms in /etc/zabbix/zabbix_agentd.d
-./zaf self-upgrade		To self-upgrade zaf
-./zaf self-remove		To self-remove zaf and its config
-./zaf cache-clean		To remove all entries from cache
+Plugin manipulation commands:
+./zaf update                            To update repo (not plugins, similar to apt-get update)                         
+./zaf upgrade                           To upgrade installed plugins from repo                                          
+./zaf install plugin                    To install plugin                                                               
+./zaf remove plugin                     To remove plugin                                                                
+
+Plugin info commands:
+./zaf plugins                           To list installed plugins                                                       
+./zaf show [plugin]                     To show installed plugins or plugin info                                        
+./zaf items [plugin]                    To list all suported items [for plugin]                                         
+
+Plugin diagnostic commands:
+./zaf test [plugin[.item]]              To test [all] suported items by zabbix_agentd [for plugin]                      
+./zaf get [plugin[.item]]               To test [all] suported items by zabbix_get [for plugin]                         
+./zaf precache [plugin[.item]]          To precache [all] suported items                                                
+
+Zabbix API commands:
+./zaf api                               To zabbix API functions. See ./zaf api for more info.                           
+
+Agent config info commands:
+./zaf userparms                         See userparms generated from zaf on stdout                                      
+./zaf agent-config                      Reconfigure zabbix userparms in /etc/zabbix/zabbix_agentd.d                     
+
+Zaf related commands:
+./zaf self-upgrade                      To self-upgrade zaf                                                             
+./zaf self-remove                       To self-remove zaf and its config                                               
+./zaf cache-clean                       To remove all entries from cache                                                
 ```
 
 Zaf can even communicate with zabbix server using its API.  If you set ZAF_ZBXAPI_URL, ZAF_ZBXAPI_USER and ZAF_ZBXAPI_PASS in /etc/zaf.conf, you can use it:
 ```
 ./zaf api command [parameters]
-hostid 'host'			Get hostid from hostname
-host 'hostid'			Get hostname from hostid
-hostgroupid 'hostgroup'		Get hostgroup id from hostgroup
-hosts 'hostgroup'		Get hosts in group
-export-hosts dir [hostgroup]	Backup all hosts [in group] (get their config from zabbix and save to dir/hostname.xml)
-export-host 'host'		Backup host (get config from zabbix to stdout)
-import-template {plugin|file}	Import template for plugin or from file
-export-template 'name'		Export template to stdout
-export-templates dir		Export all template to dir
+get-host-id host                        Get host id                                                                     
+get-byid-host id [property]             Get host property from id. Leave empty property for JSON                        
+get-template-id template                Get template id                                                                 
+get-byid-template id [property]         Get template property from id. Leave empty property for JSON                    
+get-map-id map                          Get map id                                                                      
+get-byid-map id [property]              Get map property from id. Leave empty property for JSON                         
+get-inventory host [fields]             Get inventory fields [or all fields]                                            
+export-hosts dir [hg]                   Backup all hosts [in group hg] (get their config from zabbix and save to dir/hostname.xml)
+export-host host                        Backup host (get config from zabbix to stdout)                                  
+import-template {plugin|file}           Import template for plugin or from file                                         
+export-template name                    Export template to stdout                                                       
+export-templates dir                    Export all templates to dir
 ```
 
 ### Installing plugin

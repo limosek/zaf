@@ -11,17 +11,17 @@ zaf_msg() {
 	echo $@
 }
 zaf_trc() {
-	[ "$ZAF_DEBUG" -ge "3" ] && logger -s -t zaf -- $@
+	[ "$ZAF_DEBUG" -ge "3" ] && logger -p user.info ${ZAF_LOG_STDERR} -t zaf-trace -- $@
 }
 zaf_dbg() {
-	[ "$ZAF_DEBUG" -ge "2" ] && logger -s -t zaf -- $@
+	[ "$ZAF_DEBUG" -ge "2" ] && logger -p user.debug ${ZAF_LOG_STDERR} -t zaf-debug -- $@
 }
 zaf_wrn() {
-	[ "$ZAF_DEBUG" -ge "1" ] && logger -s -t zaf -- $@
+	[ "$ZAF_DEBUG" -ge "1" ] && logger -p user.warn ${ZAF_LOG_STDERR} -t zaf-warning -- $@
 }
 zaf_err() {
-	logger -s -t zaf -- $@
-        logger -s -t zaf "Exiting with error!"
+	logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error -- $@
+        logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error "Exiting with error!"
         exit 1
 }
 # Help option
@@ -38,9 +38,45 @@ zaf_hlp() {
 	dl=$(expr $cols - $kl)
 	printf %-${kl}s%-${dl}s%b "$1" "$2" "\n"
 }
+# $1 if nonempty, log to stderr too
+zaf_debug_init() {
+	[ -z "$ZAF_DEBUG" ] && ZAF_DEBUG=1
+	export ZAF_DEBUG
+	[ -n "$1" ] && export ZAF_LOG_STDERR="-s"
+}
+
+zaf_tmp_init() {
+	[ -z "$ZAF_TMP_DIR" ] && ZAF_TMP_DIR=/tmp/
+	! [ -w "$ZAF_TMP_DIR" ] && zaf_err "Tmp dir $ZAF_TMP_DIR is not writable."
+}
 
 zaf_version(){
 	echo $ZAF_VERSION
+}
+
+# Add parameter for agent check
+# $1 parameter name (will be set to var)
+# $2 if nonempty, it is default value. If empty, parameter is mandatory
+# $3 if nonempty, regexp to test
+zaf_agentparm(){
+	local name
+	local default
+	local regexp
+
+	name="$1"
+	default="$2"
+	regexp="$3"
+	
+	[ -z "$value" ] && [ -z "$default" ] && zaf_err "$ITEM_KEY: Missing mandatory parameter $name."
+	if [ -z "$value" ]; then
+		value="$default"
+	else
+		if [ -n "$regexp" ]; then
+			echo "$value" | grep -qE "$regexp" ||  zaf_err "$ITEM_KEY: Bad parameter '$name' value '$value' (not in regexp '$regexp')."
+		fi
+	fi
+	eval $name=$value
+	zaf_trc "$ITEM_KEY: Param $name set to $value"
 }
 
 # Fetch url to stdout 
@@ -457,10 +493,35 @@ zaf_strunescape() {
 	 sed -e 's#\\\(['"$1"']\)#\1#g'
 }
 
-
 # Escape string on stdin
 # $1 - list of chars to escape
 zaf_strescape() {
 	 sed -e 's#\(['"$1"']\)#\\\1#g'
+}
+
+# Add seconds to current date and return date in YYYY-MM-DD hh:mm:ss
+# $1 seconds
+zaf_date_add() {
+	date -d "$1 seconds" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -d "$(expr $(date +%s) + $1)" -D %s "+%Y-%m-%d %H:%M:%S"
+}
+
+# Create temp file and return its name
+# $1 prefix or empty
+zaf_tmpfile() {
+	echo "$ZAF_TMP_DIR/tmp$1"
+}
+
+# return random number
+zaf_random() {
+	hexdump -n 2 -e '/2 "%u"' /dev/urandom
+}
+
+# Emulate sudo
+zaf_sudo() {
+	if zaf_is_root || ! which sudo >/dev/null 2>/dev/null; then
+		$@
+	else
+		sudo $@
+	fi
 }
 

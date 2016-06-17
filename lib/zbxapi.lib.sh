@@ -3,45 +3,56 @@
 # $1 - query string
 zaf_zbxapi_do() {
 	local result
-	zaf_trc "Zabbix API: $1"
-	result=$(curl -s -f -L -X POST -H 'Content-Type: application/json-rpc' -d "$1" "$ZAF_ZBXAPI_URL")
-	if [ $? = 0 ] && echo $result | grep -q '"result":'; then
+	local query
+	local tmpfile
+
+	tmpfile=$ZAF_TMP_DIR/zapi$$
+	query="$1"
+	zaf_trc "Zabbix API: $query"
+	curl -s -f -L -X POST -H 'Content-Type: application/json-rpc' -d "$query" "$ZAF_ZBXAPI_URL" >$tmpfile
+	if [ $? = 0 ] &&  $ZAF_LIB_DIR/JSON.sh -b <$tmpfile | grep -q '"result"'; then
 		zaf_trc "API OK"
-		echo $result
+		cat $tmpfile
+		rm -f $tmpfile
 	else
-		zaf_err "Error processing API request. ($?,$result)"
+		zaf_err "Error processing API request. ($?,$tmpfile)"
 	fi
 }
 # Call api function and cache results 
 # $1 - query string
 zaf_zbxapi_do_cache() {
 	local result
+	local tmpfile
+	local query
+
+	query="$(echo $1 | tr '\n' ' ')"
+	tmpfile=$ZAF_TMP_DIR/zcapi$$
 	if ! zaf_fromcache "$1"; then
-		result=$(zaf_zbxapi_do "$1")
-		[ -n "$result" ] && zaf_tocache "$1" "$result" 60
-		echo $result
+		zaf_zbxapi_do "$1" >$tmpfile
+		[ -s "$tmpfile" ] && cat $tmpfile | zaf_tocache_stdin "$query" 60
+		rm -f $tmpfile
 	fi
 }
 
-# Extract result from JSON response
+# Extract one result from JSON response
 zaf_zbxapi_getresult() {
-	sed -e 's/\({"jsonrpc":"2.0","result":\)\(.*\),\("id":.*\)/\2/g' | sed -e 's/^\[\]$//'
+	$ZAF_LIB_DIR/JSON.sh -b | grep '\["result"\]' | tr '\t' ' ' | cut -d ' ' -f 2-
 }
 
 # Extract XML result from JSON response
 zaf_zbxapi_getxml() {
-	zaf_zbxapi_getresult | sed -e 's/{"jsonrpc":"2.0","result":"//' | sed -e 's/","id"\:1}//' | zaf_zbxapi_getstring | zaf_strunescape '<">/'
+	zaf_zbxapi_getstring | zaf_strunescape '</">' | zaf_far '\\n' "\n"
 }
 
 # Extract string from JSON response result
 zaf_zbxapi_getstring() {
-	 sed -e 's/^"//'  -e 's/"$//' -e 's/\\n/'\\n'/g'
+	 zaf_zbxapi_getresult | sed -e 's/^"//' -e 's/"$//'
 }
 
 # Extract value from JSON response result
 # $1 key
-zaf_zbxapi_getvalue() {
-	 tr ',' '\n' | grep "\"$1\":" | cut -d '"' -f 4
+zaf_zbxapi_getvalues() {
+	 $ZAF_LIB_DIR/JSON.sh -b | grep '\["result",.*,"'$1'"]'  | tr '\t' ' ' | cut -d ' ' -f 2- | sed -e 's/^"//' -e 's/"$//'
 }
 
 # Zabbix API related functions
@@ -68,7 +79,7 @@ zaf_zbxapi_login(){
     ZAF_ZBXAPI_URL=$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 1)//$ZAF_ZBXAPI_USER:$ZAF_ZBXAPI_PASS@$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 3-)
  fi
  result=$(zaf_zbxapi_do_cache "$authstr")
- ZAF_ZBXAPI_AUTH=$(echo $result |zaf_zbxapi_getresult| zaf_zbxapi_getstring)
+ ZAF_ZBXAPI_AUTH=$(echo $result |zaf_zbxapi_getstring)
  [ -z "$ZAF_ZBXAPI_AUTH" ] && zaf_err "Cannot login into API"
  zaf_dbg "Logged into zabbix API ($ZAF_ZBXAPI_AUTH)"
 }
@@ -102,7 +113,7 @@ zaf_zbxapi_get_object() {
 		params='"params": {'$filter' "output":"'$output'"}';
 	fi
 	str='{ "method": "'$obj'.get", "jsonrpc": "2.0", "auth": "'$ZAF_ZBXAPI_AUTH'",'$params', "id": "'$id'" }'
-	result=$(zaf_zbxapi_do_cache "$str" | zaf_zbxapi_getresult)
+	result=$(zaf_zbxapi_do_cache "$str")
 	[ -z "$result" ] && zaf_dbg "API call result empty or error! ($str)"
 	echo $result
 }
@@ -113,7 +124,7 @@ zaf_zbxapi_gethostgroupid() {
 
  	result=$(zaf_zbxapi_get_object "hostgroup" '"name": ["'$1'"]')
  	[ -z "$result" ] && zaf_err "HostGroup $1 not found!"
- 	echo $result |zaf_zbxapi_getvalue groupid
+ 	echo $result |zaf_zbxapi_getvalues groupid
 }
 
 # $1 hostid
@@ -126,7 +137,7 @@ zaf_zbxapi_gethost() {
  	if [ -z "$2" ]; then
  		echo $result
 	else
-		echo $result |zaf_zbxapi_getvalue $2
+		echo $result |zaf_zbxapi_getvalues $2
 	fi
 }
 
@@ -136,7 +147,7 @@ zaf_zbxapi_gethostid() {
 
  	result=$(zaf_zbxapi_get_object "host" '"host": ["'$1'"]')
  	[ -z "$result" ] && zaf_err "Host $1 not found!"
- 	echo $result |zaf_zbxapi_getvalue hostid
+ 	echo $result |zaf_zbxapi_getvalues hostid
 }
 
 # $1 hostname
@@ -149,7 +160,7 @@ zaf_zbxapi_gethostinventory() {
 	if [ -z "$2" ]; then
  		echo $result 
 	else
-		echo $result |zaf_zbxapi_getvalue $2
+		echo $result |zaf_zbxapi_getvalues $2
 	fi
 }
 
@@ -159,7 +170,7 @@ zaf_zbxapi_gettemplateid() {
 
  	result=$(zaf_zbxapi_get_object "template" '"host": ["'$1'"]')
  	[ -z "$result" ] && zaf_err "Template $1 not found!"
- 	echo $result |zaf_zbxapi_getvalue templateid
+ 	echo $result |zaf_zbxapi_getvalues templateid
 }
 
 # $1 templateid
@@ -172,7 +183,7 @@ zaf_zbxapi_gettemplate() {
  	if [ -z "$2" ]; then
  		echo $result
 	else
-		echo $result |zaf_zbxapi_getvalue $2
+		echo $result |zaf_zbxapi_getvalues $2
 	fi
 }
 
@@ -182,7 +193,7 @@ zaf_zbxapi_gethostsingroup() {
 
  	result=$(zaf_zbxapi_get_object "host" '' '"groupids": ["'$1'"]')
  	[ -z "$result" ] && zaf_wrn "No hosts in groupid '$1'"
- 	echo $result | zaf_zbxapi_getvalue "hostid"
+ 	echo $result | zaf_zbxapi_getvalues "hostid"
 }
 
 # Get all hostids in system
@@ -190,7 +201,7 @@ zaf_zbxapi_gethostids() {
 	local result
 
  	result=$(zaf_zbxapi_get_object "host")
- 	echo $result | zaf_zbxapi_getvalue "hostid"
+ 	echo $result | zaf_zbxapi_getvalues "hostid"
 }
 
 # Get all templateids in system
@@ -198,7 +209,7 @@ zaf_zbxapi_gettemplateids() {
 	local result
 
  	result=$(zaf_zbxapi_get_object "template")
- 	echo $result | zaf_zbxapi_getvalue "templateid"
+ 	echo $result | zaf_zbxapi_getvalues "templateid"
 }
 
 # $1 hostgroupid 
@@ -207,7 +218,7 @@ zaf_zbxapi_gettemplatesingroup() {
 
  	result=$(zaf_zbxapi_get_object "template" '' '"groupids": ["'$1'"]')
  	[ -z "$result" ] && zaf_wrn "No templates in groupid '$1'"
- 	echo $result | zaf_zbxapi_getvalue "templateid"
+ 	echo $result | zaf_zbxapi_getvalues "templateid"
 }
 
 # $1 map or null for all
@@ -220,7 +231,7 @@ zaf_zbxapi_getmapid() {
  		result=$(zaf_zbxapi_get_object "map")
 	fi
  	[ -z "$result" ] && zaf_err "Map $1 not found"
- 	echo $result | zaf_zbxapi_getvalue "sysmapid"
+ 	echo $result | zaf_zbxapi_getvalues "sysmapid"
 }
 
 # $1 mapid
@@ -233,7 +244,7 @@ zaf_zbxapi_getmap() {
  	if [ -z "$2" ]; then
  		echo $result
 	else
-		echo $result |zaf_zbxapi_getvalue $2
+		echo $result |zaf_zbxapi_getvalues $2
 	fi
 }
 

@@ -27,7 +27,7 @@ zaf_ctrl_get_extitem_block() {
 # Get item body from stdin
 # $1 itemname
 zaf_ctrl_get_item_block() {
-	grep -v '^#' | awk '/^Item '$1'/ { i=0;
+	grep -vE '^#[a-zA-Z ]' | awk '/^Item '$1'/ { i=0;
 	while (i==0) {
 		getline;
 		if (/^\/Item/) exit;
@@ -42,7 +42,7 @@ zaf_ctrl_get_item_block() {
 # Get global plugin block body from stdin
 # $1 itemname
 zaf_ctrl_get_global_block() {
-	grep -v '^#' | awk '{ i=0; print $0;
+	grep -vE '^#[a-zA-Z ]' | awk '{ i=0; print $0;
 	while (i==0) {
 		getline;
 		if (/^(Item |ExtItem)/) exit;
@@ -156,6 +156,7 @@ zaf_ctrl_sudo() {
 
 	pdir="$3"
 	plugin=$1
+	! [ -d "$ZAF_SUDOERSD" ] && { zaf_wrn "$ZAF_SUDOERSD nonexistent! Skipping sudo install!"; return 1; }
 	zaf_dbg "Installing sudoers entry $ZAF_SUDOERSD/zaf_$plugin"
 	sudo=$(zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}")
 	[ -z "$sudo" ] && return  # Nothing to install
@@ -183,6 +184,7 @@ zaf_ctrl_cron() {
 
 	pdir="$3"
 	plugin=$1
+	! [ -d "$ZAF_CROND" ] && { zaf_wrn "$ZAF_CROND nonexistent! Skipping cron install!"; return 1; }
 	zaf_dbg "Installing cron entry $ZAF_CROND/zaf_$plugin"
 	cron=$(zaf_ctrl_get_global_option $2 "Cron")
 	[ -z "$cron" ] && return # Nothing to install
@@ -229,48 +231,62 @@ zaf_ctrl_generate_items_cfg() {
 	local ikey
 	local lock
 	local cache
+	local tmpfile
+	local pname
+	local pdefault
+	local pregex
+	local prest
+	local zafparms
 
 	items=$(zaf_ctrl_get_items <"$1")
+	tmpfile=$ZAF_TMP_DIR/gencfg$$
 	(set -e
 	for i in $items; do
             iscript=$(zaf_stripctrl $i)
-	    params=$(zaf_ctrl_get_item_option $1 $i "Parameters")
-	    if [ -n "$params" ]; then
+	    zaf_ctrl_get_item_option $1 $i "Parameters" >$tmpfile
+	    if [ -s "$tmpfile" ]; then
 		ikey="$2.$i[*]"
 		args=""
 		apos=1;
-		for p in $params; do
+		while read pname pdefault pregex prest; do
+			zafparams="$zafparams value=\"\$$apos\"; zaf_agentparm $pname $pdefault $pregex; export $pname; "
 			args="$args \$$apos"
 			apos=$(expr $apos + 1)
-		done
+		done <$tmpfile
 	    else
 		ikey="$2.$i"
+		zafparams=""
+		args=""
 	    fi
+	    env="export ITEM_KEY='$ikey'; export PLUGIN='$2'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
 	    lock=$(zaf_ctrl_get_item_option $1 $i "Lock")
 	    if [ -n "$lock" ]; then
 		lock="${ZAF_LIB_DIR}/zaflock $lock "
 	    fi
 	    cache=$(zaf_ctrl_get_item_option $1 $i "Cache")
 	    if [ -n "$cache" ]; then
-		cache="_cache '$cache' "
+		cache="${ZAF_LIB_DIR}/zafcache '$cache' "
 	    fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
             if [ -n "$cmd" ]; then
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock$cmd";
+                printf "%s" "UserParameter=$ikey,${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo
                 continue
             fi
             cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
             if [ -n "$cmd" ]; then
-                zaf_ctrl_get_item_option $1 $i "Script" | \
-		  zaf_far '{INCLUDES}' '. /etc/zaf.conf; . ${ZAF_LIB_DIR}/zaf.lib.sh; . ${ZAF_LIB_DIR}/ctrl.lib.sh; . ${ZAF_LIB_DIR}/zbxapi.lib.sh; . ${ZAF_LIB_DIR}/cache.lib.sh; ' \
-		  >${ZAF_TMP_DIR}/${iscript}.sh;
-                zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-                $(which echo) "UserParameter=$ikey,$cache $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args";
+                ( echo "#!/bin/sh"
+		  echo ". $ZAF_LIB_DIR/preload.sh; "
+		  zaf_ctrl_get_item_option $1 $i "Script"
+		  ) >${ZAF_TMP_DIR}/${iscript}.sh;
+                [ -z "$3" ] && zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
+                printf "%s" "UserParameter=$ikey,${env}${preload}${zafparams}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh ${args}"; echo
+		rm -f ${ZAF_TMP_DIR}/${iscript}.sh
                 continue;
             fi
 	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"
 	done
 	) || zaf_err "Error during zaf_ctrl_generate_items_cfg"
+	rm -f $tmpfile
 }
 
 # Generates zabbix cfg for external items from control file
