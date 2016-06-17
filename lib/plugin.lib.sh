@@ -55,6 +55,7 @@ zaf_plugin_info() {
 	purl=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Url)
 	phome=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Home)
 	pitems=$(zaf_ctrl_get_items <"${control}")
+	peitems=$(zaf_ctrl_get_extitems <"${control}")
 	echo
 	echo -n "Plugin '$plugin' "; [ -n "$pversion" ] && echo -n "version ${pversion}"; echo ":"
 	echo "$pdescription"; echo
@@ -64,11 +65,12 @@ zaf_plugin_info() {
 	echo 
 	if zaf_is_plugin "$(basename $plugin)"; then
 		items=$(zaf_list_plugin_items $plugin)
-		[ -n "$items" ] && echo -n "Defined items: "; echo $items
+		[ -n "$items" ] && { echo -n "Defined items: "; echo $items; }
 		items=$(zaf_list_plugin_items $plugin test)
-		[ -n "$items" ] && echo -n "Test items: "; echo $items
+		[ -n "$items" ] && { echo -n "Test items: "; echo $items; }
 		items=$(zaf_list_plugin_items $plugin precache)
-		[ -n "$items" ] && echo -n "Precache items: "; echo $items
+		[ -n "$items" ] && { echo -n "Precache items: "; echo $items; }
+		[ -n "$peitems" ] && { echo -n "External check items: "; echo $peitems; }
 	else
 		echo "Items: $pitems"
 	fi
@@ -116,9 +118,10 @@ zaf_install_plugin() {
 			zaf_ctrl_check_deps "${control}"
 			zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_cron "$plugin" "${control}" "${plugindir}"
-			zaf_ctrl_generate_cfg "${control}" "${plugin}" \
+			zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
+			zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}" 
 			zaf_ctrl_install "$url" "${control}" "${plugindir}"
 		else
 			zaf_err "Cannot install plugin '$plugin' to $plugindir!"

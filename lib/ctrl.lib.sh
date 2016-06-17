@@ -53,7 +53,7 @@ zaf_ctrl_get_global_block() {
 # Get item multiline option
 # $1 optionname
 zaf_block_get_moption() {
-	awk '/^'$1'::$/ { i=0; 
+	awk '/^'$1'::$/ { i=0; if (!/::/) print $0;
 	while (i==0) {
 		getline;
 		if (/^::$/) {i=1; continue;};
@@ -289,7 +289,7 @@ zaf_ctrl_generate_items_cfg() {
 	rm -f $tmpfile
 }
 
-# Generates zabbix cfg for external items from control file
+# Generates zabbix items cfg from control file
 # $1 control
 # $2 pluginname
 zaf_ctrl_generate_extitems_cfg() {
@@ -299,47 +299,58 @@ zaf_ctrl_generate_extitems_cfg() {
 	local ikey
 	local lock
 	local cache
+	local tmpfile
+	local pname
+	local pdefault
+	local pregex
+	local prest
+	local zafparms
 
 	items=$(zaf_ctrl_get_extitems <"$1")
-	if [ -n "$items" ] && [ -z "${ZAF_SERVER_EXTSCRIPTS}" ] || ! [ -d "${ZAF_SERVER_EXTSCRIPTS}" ]; then
-		zaf_err "Zabbix server external scripts directory '${ZAF_SERVER_EXTSCRIPTS}' unknown. Cannot add external item." 
-	fi
+	tmpfile=$ZAF_TMP_DIR/gencfg$$
 	(set -e
 	for i in $items; do
             iscript=$(zaf_stripctrl $i)
-	    params=$(zaf_ctrl_get_extitem_option $1 $i "Parameters")
+	    zaf_ctrl_get_extitem_option $1 $i "Parameters" >$tmpfile
 	    ikey="$2.$i"
-	    if [ -n "$params" ]; then
+	    if [ -s "$tmpfile" ]; then
 		args=""
 		apos=1;
-		for p in $params; do
+		while read pname pdefault pregex prest; do
+			zafparams="$zafparams value=\"\$$apos\"; zaf_agentparm $pname $pdefault $pregex; export $pname; "
 			args="$args \$$apos"
 			apos=$(expr $apos + 1)
-		done
+		done <$tmpfile
+	    else
+		zafparams=""
+		args=""
 	    fi
+	    env="export ITEM_KEY='$ikey'; export PLUGIN='$2'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
 	    lock=$(zaf_ctrl_get_extitem_option $1 $i "Lock")
 	    if [ -n "$lock" ]; then
 		lock="${ZAF_LIB_DIR}/zaflock $lock "
 	    fi
 	    cache=$(zaf_ctrl_get_extitem_option $1 $i "Cache")
 	    if [ -n "$cache" ]; then
-		cache="_cache '$cache' "
+		cache="${ZAF_LIB_DIR}/zafcache '$cache' "
 	    fi
             cmd=$(zaf_ctrl_get_extitem_option $1 $i "Cmd")
             if [ -n "$cmd" ]; then
-                $(which echo) "UserParameter=$ikey,${ZAF_LIB_DIR}/preload.sh $cache $lock$cmd";
+		echo "#!/bin/sh" >${ZAF_SERVER_EXTSCRIPTS}/$ikey
+		chmod +x ${ZAF_SERVER_EXTSCRIPTS}/$ikey
+                (printf "%s" "${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo) >>${ZAF_SERVER_EXTSCRIPTS}/$ikey
                 continue
             fi
             cmd=$(zaf_ctrl_get_extitem_option $1 $i "Script")
             if [ -n "$cmd" ]; then
-                zaf_ctrl_get_extitem_option $1 $i "Script" >${ZAF_TMP_DIR}/${iscript}.sh;
-                zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-                $(which echo) -e "#!/bin/sh\n${ZAF_LIB_DIR}/preload.sh $cache $lock${ZAF_PLUGINS_DIR}/$2/${iscript}.sh $args" >${ZAF_SERVER_EXTSCRIPTS}/$ikey;
+                echo "#!/bin/sh" >${ZAF_SERVER_EXTSCRIPTS}/$ikey
 		chmod +x ${ZAF_SERVER_EXTSCRIPTS}/$ikey
+                (printf "%s" "${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo) >>${ZAF_SERVER_EXTSCRIPTS}/$ikey
                 continue;
             fi
 	    zaf_err "External item $i declared in control file but has no Cmd, Function or Script!"
 	done
-	) || zaf_err "Error during zaf_ctrl_generate_items_cfg"
+	) || zaf_err "Error during zaf_ctrl_generate_extitems_cfg"
+	rm -f $tmpfile
 }
 
