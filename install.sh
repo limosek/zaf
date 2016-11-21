@@ -21,8 +21,9 @@ zaf_which() {
 	if which >/dev/null 2>/dev/null; then
 		which "$1"
 	else
-		[ -x /bin/$1 ] && { echo /bin/$1; return; }
-		[ -x /usr/bin/$1 ] && { echo /usr/bin/$1; return; }
+		for i in /bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin; do
+			[ -x $i/$1 ] && { echo $i/$1; return; }
+		done
 		return 1
 	fi
 }
