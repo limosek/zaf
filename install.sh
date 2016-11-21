@@ -16,6 +16,17 @@ zaf_fetch_url(){
 	curl -f -k -s -L -o - "$1"
 }
 
+# Lite version of zaf_which, full version will be loaded later
+zaf_which() {
+	if which >/dev/null 2>/dev/null; then
+		which "$1"
+	else
+		[ -x /bin/$1 ] && { echo /bin/$1; return; }
+		[ -x /usr/bin/$1 ] && { echo /usr/bin/$1; return; }
+		return 1
+	fi
+}
+
 # Lite version of zaf_err, full version will be loaded later
 zaf_err() {
 	logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error -- $@

@@ -266,7 +266,7 @@ zaf_random() {
 
 # Emulate sudo
 zaf_sudo() {
-	if zaf_is_root || ! which sudo >/dev/null 2>/dev/null; then
+	if zaf_is_root || ! zaf_which sudo >/dev/null 2>/dev/null; then
 		$@
 	else
 		sudo $@
