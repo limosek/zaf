@@ -49,7 +49,8 @@ git clone https://github.com/limosek/zaf.git; cd zaf; git checkout master
 ```
 
 So you can pass ANY configuration of your zabbix agent directly to installer prefixing it with *Z_*. Please note that options are *Case Sensitive*! 
-Next to this, you can pass ANY zaf config options by *ZAF_* prefix. Interresting ZAF options:
+Next to this, you can pass ANY zaf config options by *ZAF_* prefix. You can see all interesting ZAF options if you use install interactive command.
+Interresting ZAF options:
 ```
  # If we want to use GIT and local GIT repository
  ZAF_GIT='1'# Default
@@ -62,6 +63,9 @@ Next to this, you can pass ANY zaf config options by *ZAF_* prefix. Interresting
 
  # Plugins can be downloaded from http[s] too
  ZAF_REPO_URL='https://raw.githubusercontent.com/limosek/zaf-plugins/master/'
+
+ # Force installer to act as root even if it is not detected
+ ZAF_ISROOT=1
 
 ```
 

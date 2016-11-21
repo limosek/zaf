@@ -20,31 +20,41 @@ zaf_configure_os_freebsd() {
     ZAF_SUDOERSD="/usr/local/etc/sudoers.d"
 }
 
+zaf_which() {
+	if which >/dev/null 2>/dev/null; then
+		which "$1"
+	else
+		[ -x /bin/$1 ] && { echo /bin/$1; return; }
+		[ -x /usr/bin/$1 ] && { echo /usr/bin/$1; return; }
+		return 1
+	fi
+}
+
 zaf_detect_system() {
 	ZAF_FILES_UID=zabbix
 	ZAF_FILES_GID=zabbix
 	ZAF_FILES_UMASK=0770
-	if which dpkg >/dev/null; then
+	if zaf_which dpkg >/dev/null; then
 		ZAF_PKG=dpkg
 		ZAF_OS=$(lsb_release -is|zaf_tolower)
 		ZAF_OS_CODENAME=$(lsb_release -cs|zaf_tolower)
 		ZAF_CURL_INSECURE=0
 		ZAF_AGENT_PKG="zabbix-agent"
 		return
-	else if which rpm >/dev/null; then
+	else if zaf_which rpm >/dev/null; then
 		ZAF_PKG="rpm"
 		ZAF_OS=$(lsb_release -is|zaf_tolower)
 		ZAF_OS_CODENAME=$(lsb_release -cs|zaf_tolower)
 		ZAF_CURL_INSECURE=0
 		ZAF_AGENT_PKG="zabbix-agent"
 		return
-	else if which opkg >/dev/null; then
+	else if zaf_which opkg >/dev/null; then
 		ZAF_PKG="opkg"
 		. /etc/openwrt_release
 		ZAF_OS="$(echo $DISTRIB_ID|zaf_tolower)"
 		ZAF_OS_CODENAME="$(echo $DISTRIB_CODENAME|zaf_tolower)"
 		return	
-	else if which pkg >/dev/null; then
+	else if zaf_which pkg >/dev/null; then
 		ZAF_PKG="pkg"
 		ZAF_OS="freebsd"
 		ZAF_OS_CODENAME="$(freebsd-version|cut -d '-' -f 1)"
@@ -81,7 +91,7 @@ zaf_os_specific(){
 }
 
 zaf_is_root(){
-    [ "$USER" = "root" ]
+    [ "$USER" = "root" ] || [ "$EUID" = "0" ] || [ -n "$ZAF_ISROOT" ]
 }
 
 # Install file, bin or directory and respect install prefix 

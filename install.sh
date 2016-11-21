@@ -39,6 +39,7 @@ zaf_download_files() {
 zaf_get_option(){
 	local opt
 
+	ZAF_HELP_OPTS="$ZAF_HELP_OPTS\n$1 $2 [$3]"
         eval opt=\$C_$1
 	if [ -n "$opt" ]; then
             eval "$1='$opt'"
@@ -231,7 +232,7 @@ zaf_configure(){
 			fi
 		fi
 	fi
-	if which git >/dev/null; then
+	if zaf_which git >/dev/null; then
 		ZAF_GIT=1
 	else
 		ZAF_GIT=0
@@ -295,12 +296,17 @@ zaf_configure(){
 	zaf_set_option ZAF_FILES_GID "$ZAF_FILES_GID"
 	zaf_set_option ZAF_FILES_UMASK "$ZAF_FILES_UMASK"
 	zaf_set_option ZAF_AGENT_RESTART "$ZAF_AGENT_RESTART"
-	if [ -f $ZABBIX_SERVER_BIN ]; then
+	if [ -x "$ZAF_SERVER_BIN" ]; then
 		zaf_set_option ZAF_SERVER_CONFIG "$ZAF_SERVER_CONFIG"
 		zaf_set_option ZAF_SERVER_CONFIGD "$ZAF_SERVER_CONFIGD"
 		zaf_set_option ZAF_SERVER_EXTSCRIPTS "$(zaf_get_zabbix_option $ZAF_SERVER_CONFIG ExternalScripts)"
+		zaf_set_option ZAF_SERVER_BIN "$ZAF_SERVER_BIN"
+	else
+		zaf_set_option ZAF_SERVER_CONFIG ""
+		zaf_set_option ZAF_SERVER_BIN ""
+		zaf_set_option ZAF_SERVER_CONFIGD ""
+		zaf_set_option ZAF_SERVER_EXTSCRIPTS ""
 	fi
-	zaf_set_option ZAF_SERVER_BIN "$ZAF_SERVER_BIN"
 	zaf_set_option ZAF_SUDOERSD "$ZAF_SUDOERSD"
 	zaf_set_option ZAF_CROND "$ZAF_CROND"
 	zaf_set_option ZAF_ZBXAPI_URL "$ZAF_ZBXAPI_URL"
@@ -378,7 +384,7 @@ if ! [ -f README.md ]; then
 	export ZAF_TMP_DIR="/tmp/zaf-installer"
 	export ZAF_DIR="$ZAF_TMP_DIR/zaf"
 	mkdir -p $ZAF_TMP_DIR
-	if ! which curl >/dev/null;
+	if ! zaf_which curl >/dev/null;
 	then
 		zaf_err "Curl not found. Cannot continue. Please install it."
 	fi
@@ -390,7 +396,7 @@ if ! [ -f README.md ]; then
 fi
 
 # Try to load local downloaded libs
-if ! type zaf_version >/dev/null; then
+if ! type zaf_version >/dev/null 2>/dev/null; then
 . lib/zaf.lib.sh
 . lib/plugin.lib.sh
 . lib/os.lib.sh
@@ -500,7 +506,7 @@ install)
 	echo 'Example 2 (preconfigure agent options): install.sh auto A_Server=zabbix.server A_ServerActive=zabbix.server A_Hostname=$(hostname)'
 	echo "Example 3 (preconfigure zaf packaging system to use): install.sh auto ZAF_PKG=opkg"
 	echo "Example 4 (interactive): install.sh interactive"
-	echo
+	echo 
 	exit 1
 esac
 

@@ -137,7 +137,7 @@ zaf_ctrl_check_deps() {
 	fi
 	deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-bin" )
 	for cmd in $deps; do
-		if ! which $cmd >/dev/null; then
+		if ! zaf_which $cmd >/dev/null; then
 			zaf_err "Missing binary dependency $cmd. Please install it first."
 		fi
 	done
@@ -160,13 +160,13 @@ zaf_ctrl_sudo() {
 	zaf_dbg "Installing sudoers entry $ZAF_SUDOERSD/zaf_$plugin"
 	sudo=$(zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}")
 	[ -z "$sudo" ] && return  # Nothing to install
-	if ! which sudo >/dev/null; then
+	if ! zaf_which sudo >/dev/null; then
 		zaf_wrn "Sudo needed bud not installed?"
 	fi
 	cmd=$(echo $sudo | cut -d ' ' -f 1)
 	parms=$(echo $sudo | cut -d ' ' -f 2-)
-	if which $cmd >/dev/null ; then
-		(echo "zabbix ALL=NOPASSWD:SETENV: $(which $cmd) $(echo $parms | tr '%' '*')";echo) >$ZAF_SUDOERSD/zaf_$plugin || zaf_err "Error during zaf_ctrl_sudo"
+	if zaf_which $cmd >/dev/null ; then
+		(echo "zabbix ALL=NOPASSWD:SETENV: $(zaf_which $cmd) $(echo $parms | tr '%' '*')";echo) >$ZAF_SUDOERSD/zaf_$plugin || zaf_err "Error during zaf_ctrl_sudo"
 		chmod 0440 $ZAF_SUDOERSD/zaf_$plugin
 	else
 		zaf_err "Cannot find binary '$cmd' to put into sudoers."
