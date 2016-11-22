@@ -222,7 +222,7 @@ zaf_configure_server() {
 
 zaf_preconfigure(){
 	zaf_detect_system 
-        zaf_os_specific zaf_configure_os
+        zaf_os_specific zaf_preconfigure_os
 	if ! zaf_is_root; then
             [ -z "$INSTALL_PREFIX" ] && zaf_err "We are not root. Use INSTALL_PREFIX or become root."
 	else
@@ -372,6 +372,7 @@ zaf_postconfigure() {
 	    [ "${ZAF_GIT}" = 1 ] && ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf update
             ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf reinstall zaf || zaf_err "Error installing zaf plugin."
 	    ${INSTALL_PREFIX}/${ZAF_BIN_DIR}/zaf agent-config || zaf_err "Error configuring agent."
+	    zaf_os_specific zaf_postconfigure_os
             if zaf_is_root && ! zaf_test_item zaf.framework_version; then
 		echo "Something is wrong with zabbix agent config."
 		echo "Ensure that zabbix_agentd reads ${ZAF_AGENT_CONFIG}"

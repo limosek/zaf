@@ -1,23 +1,33 @@
 # Os related functions
 
-zaf_configure_os_openwrt() {
+zaf_preconfigure_os_openwrt() {
     ZAF_AGENT_RESTART="zaf agent-config ; /etc/init.d/zabbix_agentd restart"
     ZAF_AGENT_CONFIGD="/var/run/zabbix_agentd.conf.d/"
     ZAF_AGENT_CONFIG="/etc/zabbix_agentd.conf"
     ZAF_AGENT_PKG="zabbix-agentd"
     ZAF_CURL_INSECURE=1
 }
-zaf_configure_os_beesip() {
-   zaf_configure_os_openwrt
+zaf_preconfigure_os_beesip() {
+   zaf_preconfigure_os_openwrt
 } 
 
-zaf_configure_os_freebsd() {
+zaf_preconfigure_os_freebsd() {
     ZAF_AGENT_PKG="zabbix3-agent"
     ZAF_AGENT_CONFIG="/usr/local/etc/zabbix3/zabbix_agentd.conf"
     ZAF_AGENT_CONFIGD="/usr/local/etc/zabbix3/zabbix_agentd.conf.d/"
     ZAF_AGENT_BIN="/usr/local/sbin/zabbix_agentd"
     ZAF_AGENT_RESTART="service zabbix_agentd restart"
     ZAF_SUDOERSD="/usr/local/etc/sudoers.d"
+}
+
+zaf_postconfigure_os_openwrt() {
+	if ! grep -q "zaf agent-config" /etc/init.d/zabbix_agentd; then
+		sed -i 's/uci2config $NAME/uci2config $NAME; zaf agent-config/' /etc/init.d/zabbix_agentd
+	fi
+}
+
+zaf_postconfigure_os_beesip() {
+	zaf_postconfigure_os_openwrt
 }
 
 zaf_which() {
