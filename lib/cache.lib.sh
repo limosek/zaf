@@ -4,7 +4,7 @@ zaf_cache_init(){
 	if [ -z "$ZAF_CACHE_DIR" ] || [ "$ZAF_CACHE_DIR" = "/tmp/zafc" ]; then
 		ZAF_CACHE_DIR=${ZAF_TMP_DIR}/zafc
 		mkdir -p $ZAF_CACHE_DIR
-		chown $ZAF_FILES_UID $ZAF_CACHE_DIR
+		chown $ZAF_FILES_UID $ZAF_CACHE_DIR >/dev/null 2>/dev/null
 	fi
 	if [ -w $ZAF_CACHE_DIR ]; then
 		zaf_trc "Cache: Removing stale entries"
