@@ -1,7 +1,11 @@
 # Zaf cache related functions
 
 zaf_cache_init(){
-	[ -z "$ZAF_CACHE_DIR" ] && ZAF_CACHE_DIR=${ZAF_TMP_DIR}/zafc
+	if [ -z "$ZAF_CACHE_DIR" ] || [ "$ZAF_CACHE_DIR" = "/tmp/zafc" ]; then
+		ZAF_CACHE_DIR=${ZAF_TMP_DIR}/zafc
+		mkdir -p $ZAF_CACHE_DIR
+		chown $ZAF_FILES_UID $ZAF_CACHE_DIR
+	fi
 	if [ -w $ZAF_CACHE_DIR ]; then
 		zaf_trc "Cache: Removing stale entries"
 		(cd $ZAF_CACHE_DIR && find ./ -type f -name '*.info' -mmin +1 2>/dev/null | \
