@@ -104,8 +104,8 @@ zaf_set_zabbix_option() {
 	local option="$2"
 	local value="$3"
 	if grep -q ^$option\= $cfgfile; then
-		zaf_dbg "Setting option $option in $cfgfile."
-		sed -i "s/$option=\(.*\)/$option=$2/" $cfgfile
+		zaf_dbg "Setting option $option in $cfgfile to $3."
+		sed -i "s/$option=\(.*\)/$option=$value/" $cfgfile
 	else
 		 zaf_move_zabbix_option "$1" "$2" "$3"
 	fi
