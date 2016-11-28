@@ -354,14 +354,14 @@ zaf_configure(){
 zaf_install_all() {
 	zaf_install_dir ${ZAF_LIB_DIR}
 	for i in lib/zaf.lib.sh lib/plugin.lib.sh lib/os.lib.sh lib/ctrl.lib.sh lib/cache.lib.sh lib/zbxapi.lib.sh lib/JSON.sh; do
-		zaf_install $i ${ZAF_LIB_DIR}/ || zaf_err "Error installing $i"
+		zaf_install $i ${ZAF_LIB_DIR}/ 
 	done
 	for i in lib/zaflock lib/zafcache lib/preload.sh; do
-		zaf_install_bin $i ${ZAF_LIB_DIR}/ || zaf_err "Error installing $i"
+		zaf_install_bin $i ${ZAF_LIB_DIR}/ 
 	done
 	zaf_install_dir ${ZAF_BIN_DIR}
 	for i in zaf; do
-		zaf_install_bin $i ${ZAF_BIN_DIR}/ || zaf_err "Error installing $i"
+		zaf_install_bin $i ${ZAF_BIN_DIR}/ 
 	done
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
 	zaf_install_dir ${ZAF_PLUGINS_DIR}
