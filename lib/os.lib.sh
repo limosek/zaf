@@ -110,19 +110,19 @@ zaf_is_root(){
 # $2 - directory
 zaf_install(){
     zaf_dbg "Install file $1 to $INSTALL_PREFIX/$2/$(basename $1)"
-    $ZAF_DO cp "$1" "$INSTALL_PREFIX/$2/$(basename $1)"
+    $ZAF_DO cp "$1" "$INSTALL_PREFIX/$2/$(basename $1)" || zaf_err "Cannot create file $INSTALL_PREFIX/$2/$(basename $1)!"
 }
 # $1 - src file
 # $2 - directory
 zaf_install_bin(){
     zaf_dbg "Install binary $1 to $INSTALL_PREFIX/$2/$(basename $1)"
-    $ZAF_DO cp "$1" "$INSTALL_PREFIX/$2/$(basename $1)"
+    $ZAF_DO cp "$1" "$INSTALL_PREFIX/$2/$(basename $1)" || zaf_err "Cannot create binary $INSTALL_PREFIX/$2/$(basename $1)!"
     $ZAF_DO chmod +x "$INSTALL_PREFIX/$2/$(basename $1)"
 }
 # $1 - directory
 zaf_install_dir(){
     zaf_dbg "Install directory $1 to $INSTALL_PREFIX/$1"
-    $ZAF_DO mkdir -p "$INSTALL_PREFIX/$1"
+    $ZAF_DO mkdir -p "$INSTALL_PREFIX/$1" || zaf_err "Cannot create directory $INSTALL_PREFIX/$1!"
 }
 # $1 - file
 zaf_touch(){
