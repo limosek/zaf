@@ -1,7 +1,7 @@
 # Os related functions
 
 zaf_preconfigure_os_openwrt() {
-    ZAF_AGENT_RESTART="zaf agent-config ; /etc/init.d/zabbix_agentd restart"
+    ZAF_AGENT_RESTART="/etc/init.d/zabbix_agentd restart"
     ZAF_AGENT_CONFIGD="/var/run/zabbix_agentd.conf.d/"
     ZAF_AGENT_CONFIG="/etc/zabbix_agentd.conf"
     ZAF_AGENT_PKG="zabbix-agentd"

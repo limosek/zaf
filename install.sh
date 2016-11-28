@@ -221,7 +221,7 @@ zaf_configure_server() {
 
 
 zaf_preconfigure(){
-	zaf_detect_system 
+	[ -z "$ZAF_OS" ] && zaf_detect_system 
         zaf_os_specific zaf_preconfigure_os
 	if ! zaf_is_root; then
             [ -z "$INSTALL_PREFIX" ] && zaf_err "We are not root. Use INSTALL_PREFIX or become root."
@@ -518,9 +518,10 @@ install)
 	echo " To unset Agent-Option use Z_Option=''"
         echo 
 	echo "Example 1 (default install): install.sh auto"
-	echo 'Example 2 (preconfigure agent options): install.sh auto A_Server=zabbix.server A_ServerActive=zabbix.server A_Hostname=$(hostname)'
-	echo "Example 3 (preconfigure zaf packaging system to use): install.sh auto ZAF_PKG=opkg"
-	echo "Example 4 (interactive): install.sh interactive"
+	echo 'Example 2 (preconfigure agent options): install.sh auto Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_Hostname=$(hostname)'
+	echo 'Example 3 (preconfigure server options): install.sh auto S_StartPollers=10 S_ListenPort=10051'
+	echo "Example 4 (preconfigure zaf packaging system to use): install.sh auto ZAF_PKG=opkg"
+	echo "Example 5 (interactive): install.sh interactive"
 	echo 
 	exit 1
 esac
