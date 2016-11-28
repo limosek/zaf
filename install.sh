@@ -244,10 +244,12 @@ zaf_configure(){
 			fi
 		fi
 	fi
-	if zaf_which git >/dev/null; then
-		ZAF_GIT=1
-	else
-		ZAF_GIT=0
+	if [ -z "$ZAF_GIT" ]; then
+		if zaf_which git >/dev/null; then
+			ZAF_GIT=1
+		else
+			ZAF_GIT=0
+		fi
 	fi
 	zaf_get_option ZAF_GIT "Git is installed" "$ZAF_GIT" "$INSTALL_MODE"
 	zaf_get_option ZAF_CURL_INSECURE "Insecure curl (accept all certificates)" "1" "$INSTALL_MODE"
