@@ -263,13 +263,13 @@ zaf_configure(){
 	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$INSTALL_MODE"
 
 	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$INSTALL_MODE"
-	! [ -d "${ZAF_AGENT_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_agentd.d" ] && ZAF_AGENT_CONFIGD="/etc/zabbix/zabbix_agentd.d"
+	[ -z "${ZAF_AGENT_CONFIGD}" ] && ! [ -d "${ZAF_AGENT_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_agentd.d" ] && ZAF_AGENT_CONFIGD="/etc/zabbix/zabbix_agentd.d"
 	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$INSTALL_MODE"
 
 	zaf_get_option ZAF_SERVER_CONFIG "Zabbix server config" "/etc/zabbix/zabbix_server.conf" "$INSTALL_MODE"
-	! [ -d "${ZAF_SERVER_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_server.d" ] && ZAF_SERVER_CONFIGD="/etc/zabbix/zabbix_server.d"
+	[ -z "${ZAF_SERVER_CONFIGD}" ] && ! [ -d "${ZAF_SERVER_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_server.d" ] && ZAF_SERVER_CONFIGD="/etc/zabbix/zabbix_server.d"
 	zaf_get_option ZAF_SERVER_CONFIGD "Zabbix server config.d" "/etc/zabbix/zabbix_server.conf.d/" "$INSTALL_MODE"
 	zaf_get_option ZAF_SERVER_BIN "Zabbix server binary" "/usr/sbin/zabbix_server" "$INSTALL_MODE"
 	
