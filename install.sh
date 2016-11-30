@@ -259,6 +259,7 @@ zaf_configure(){
         zaf_get_option ZAF_BIN_DIR "Directory to put binaries" "/usr/bin" "$INSTALL_MODE"
 	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$INSTALL_MODE"
 	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_REPO_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$INSTALL_MODE"
+	zaf_get_option ZAF_PROXY "http proxy used by zaf" "" "$INSTALL_MODE"
 	zaf_get_option ZAF_REPO_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$INSTALL_MODE"
 	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$INSTALL_MODE"
 
@@ -301,6 +302,7 @@ zaf_configure(){
         zaf_set_option ZAF_BIN_DIR "$ZAF_BIN_DIR"
 	zaf_set_option ZAF_PLUGINS_DIR "$ZAF_PLUGINS_DIR"
 	zaf_set_option ZAF_REPO_URL "$ZAF_REPO_URL"
+	zaf_set_option ZAF_PROXY "$ZAF_PROXY"
 	[ "${ZAF_GIT}" = 1 ] && zaf_set_option ZAF_REPO_GITURL "$ZAF_REPO_GITURL"
 	zaf_set_option ZAF_REPO_DIR "$ZAF_REPO_DIR"
 	zaf_set_option ZAF_AGENT_CONFIG "$ZAF_AGENT_CONFIG"
@@ -398,6 +400,9 @@ if ! [ -f README.md ]; then
 	ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 	export ZAF_TMP_DIR="/tmp/zaf-installer"
 	export ZAF_DIR="$ZAF_TMP_DIR/zaf"
+	if [ -n "$ZAF_PROXY" ]; then
+		export ALL_PROXY="$ZAF_PROXY"
+	fi
 	mkdir -p $ZAF_TMP_DIR
 	if ! zaf_which curl >/dev/null;
 	then
@@ -447,6 +452,9 @@ for pair in "$@"; do
     zaf_wrn "Overriding $option from cmdline."
 done
 [ -z "$C_ZAF_TMP_DIR" ] && C_ZAF_TMP_DIR="/tmp/"
+if [ -n "$ZAF_PROXY" ]; then
+	export ALL_PROXY="$ZAF_PROXY"
+fi
 
 case $1 in
 interactive)

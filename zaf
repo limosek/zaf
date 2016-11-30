@@ -25,6 +25,10 @@ ZAF_CFG_FILE="/etc/zaf.conf"
 	[ -n "$secondstage" ] && exec $0 $params
 fi
 
+if [ -n "$ZAF_PROXY" ]; then
+	export ALL_PROXY="$ZAF_PROXY"
+fi
+
 if [ -f ./lib/zaf.lib.sh ]; then
 . ./lib/zaf.lib.sh
 . ./lib/plugin.lib.sh
