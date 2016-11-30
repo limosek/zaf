@@ -51,23 +51,36 @@ git clone https://github.com/limosek/zaf.git; cd zaf; git checkout master
 So you can pass ANY configuration of your zabbix agent directly to installer prefixing it with *Z_*. Please note that options are *Case Sensitive*! 
 Next to this, you can pass ANY zaf config options by *ZAF_* prefix. You can see all interesting ZAF options if you use install interactive command.
 Interresting ZAF options:
-```
- # If we want to use GIT and local GIT repository
- ZAF_GIT='1'# Default
 
- # Git repository. Can be your local version
- ZAF_REPO_GITURL='https://github.com/limosek/zaf-plugins.git'
-
- # Where to install plugins
- ZAF_PLUGINS_DIR='/usr/lib/zaf/plugins'
-
- # Plugins can be downloaded from http[s] too
- ZAF_REPO_URL='https://raw.githubusercontent.com/limosek/zaf-plugins/master/'
-
- # Force installer to act as root even if it is not detected
- ZAF_ISROOT=1
-
-```
+Option|Info|Default
+------|----|-------
+ZAF_PKG|Packaging system to use|detect
+ZAF_OS|Operating system to use|detect
+ZAF_OS_CODENAME|Operating system codename|detect
+ZAF_AGENT_PKG|Zabbix agent package|detect
+ZAF_AGENT_OPTIONS|Zabbix options to set in cfg|empty
+ZAF_GIT|Git is installed|detect
+ZAF_CURL_INSECURE|Insecure curl (accept all certificates)|1
+ZAF_TMP_DIR|Tmp directory|/tmp/
+ZAF_CACHE_DIR|Cache directory|/tmp/zafc
+ZAF_LIB_DIR|Libraries directory|/usr/lib/zaf
+ZAF_PLUGINS_DIR|Plugins directory|${ZAF_LIB_DIR}/plugins
+ZAF_PROXY|http[s] and ftp proxy used by zaf|empty	
+ZAF_REPO_URL|Plugins http[s] repository|https://raw.githubusercontent.com/limosek/zaf-plugins/master/
+ZAF_REPO_DIR|Plugins directory|${ZAF_LIB_DIR}/repo
+ZAF_AGENT_CONFIG|Zabbix agent config|/etc/zabbix/zabbix_agentd.conf
+ZAF_AGENT_CONFIGD|Zabbix agent config.d|/etc/zabbix/zabbix_agentd.conf.d/
+ZAF_AGENT_BIN|Zabbix agent binary|/usr/sbin/zabbix_agentd
+ZAF_AGENT_RESTART|Zabbix agent restart cmd|detect
+ZAF_SERVER_CONFIG|Zabbix server config|/etc/zabbix/zabbix_server.conf
+ZAF_SERVER_CONFIGD|Zabbix server config.d|/etc/zabbix/zabbix_server.conf.d/
+ZAF_SERVER_BIN|Zabbix server binary|/usr/sbin/zabbix_server
+ZAF_SUDOERSD|Sudo sudoers.d directory|/etc/sudoers.d
+ZAF_CROND|Cron.d directory|/etc/cron.d
+ZAF_ZBXAPI_URL|Zabbix API url|http://localhost/zabbix/api_jsonrpc.php
+ZAF_ZBXAPI_USER|Zabbix API user|zaf
+ZAF_ZBXAPI_PASS|Zabbix API password|empty
+ZAF_ZBXAPI_AUTHTYPE|Zabbix API authentication type|internal
 
 Installer will try to autoguess suitable config options for your system.
 Now everything was tested on Debian and OpenWrt. If somebody is interrested in, you can help and test with some rpm specific functions. Remember that on some systems, default zabbix agent config is empty so you *need to* enter essential config options as parameters.
