@@ -38,7 +38,6 @@ zaf_ctrl_get_item_block() {
 	}'
 }
 
-
 # Get global plugin block body from stdin
 # $1 itemname
 zaf_ctrl_get_global_block() {
@@ -77,15 +76,19 @@ zaf_block_get_option() {
 zaf_ctrl_get_global_option() {
 	local ctrlvar
 	local ctrlopt
+	local key
 
-	ctrlopt="ZAF_CTRL_$(zaf_stripctrl $2)"
-	eval ctrlvar=\$$ctrlopt
-	if [ -n "$ctrlvar" ]; then
-		zaf_dbg "Overriding control field $2 from env $ctrlopt($ctrlvar)"
-		echo $ctrlopt
-	else
-		zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" \
-		|| zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
+	key="$1-$2"
+	if ! zaf_fromcache $key; then 
+		ctrlopt="ZAF_CTRL_$(zaf_stripctrl $2)"
+		eval ctrlvar=\$$ctrlopt
+		if [ -n "$ctrlvar" ]; then
+			zaf_dbg "Overriding control field $2 from env $ctrlopt($ctrlvar)"
+			echo $ctrlopt
+		else
+			zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" \
+			|| zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
+		fi | zaf_tocache_stdin "$key" "600" 
 	fi
 }
 
@@ -96,16 +99,20 @@ zaf_ctrl_get_global_option() {
 zaf_ctrl_get_item_option() {
 	local ctrlvar
 	local ctrlopt
+	local key
 
-	ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
-	eval ctrlvar=\$$ctrlopt
-	if [ -n "$ctrlvar" ]; then
-		zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
-		echo $ctrlopt
-	else
-		zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" \
-		|| zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
-	fi
+	key="i$1-$2-$3"
+	if ! zaf_fromcache "$key"; then
+		ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
+		eval ctrlvar=\$$ctrlopt
+		if [ -n "$ctrlvar" ]; then
+			zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
+			echo $ctrlopt
+		else
+			zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" \
+			|| zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
+		fi | zaf_tocache_stdin "$key" "600" 
+	fi 
 }
 
 # Get external item specific option (single or multiline)
@@ -115,15 +122,19 @@ zaf_ctrl_get_item_option() {
 zaf_ctrl_get_extitem_option() {
 	local ctrlvar
 	local ctrlopt
+	local key
 
-	ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
-	eval ctrlvar=\$$ctrlopt
-	if [ -n "$ctrlvar" ]; then
-		zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
-		echo $ctrlopt
-	else
-		zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_moption "$3" \
-		|| zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_option "$3"
+	key="e$1-$2-$3"
+	if ! zaf_fromcache "$key"; then
+		ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
+		eval ctrlvar=\$$ctrlopt
+		if [ -n "$ctrlvar" ]; then
+			zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
+			echo $ctrlopt
+		else
+			zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_moption "$3" \
+			|| zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_option "$3"
+		fi | zaf_tocache_stdin "$key" "600" 
 	fi
 }
 
@@ -158,9 +169,11 @@ zaf_ctrl_sudo() {
 
 	pdir="$3"
 	plugin=$1
+	sudo=$(zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}")
+	[ -z "$sudo" ] || [ -z "$ZAF_SUDOERSD" ] && return
 	! [ -d "$ZAF_SUDOERSD" ] && { zaf_wrn "$ZAF_SUDOERSD nonexistent! Skipping sudo install!"; return 1; }
 	zaf_dbg "Installing sudoers entry $ZAF_SUDOERSD/zaf_$plugin"
-	sudo=$(zaf_ctrl_get_global_option $2 "Sudo" | zaf_far '{PLUGINDIR}' "${plugindir}")
+	
 	[ -z "$sudo" ] && return  # Nothing to install
 	if ! zaf_which sudo >/dev/null; then
 		zaf_wrn "Sudo needed bud not installed?"
@@ -186,9 +199,10 @@ zaf_ctrl_cron() {
 
 	pdir="$3"
 	plugin=$1
+	cron=$(zaf_ctrl_get_global_option $2 "Cron")
+	[ -z "$cron" ]  || [ -z "$ZAF_CROND" ] && return
 	! [ -d "$ZAF_CROND" ] && { zaf_wrn "$ZAF_CROND nonexistent! Skipping cron install!"; return 1; }
 	zaf_dbg "Installing cron entry $ZAF_CROND/zaf_$plugin"
-	cron=$(zaf_ctrl_get_global_option $2 "Cron")
 	[ -z "$cron" ] && return # Nothing to install
 	zaf_ctrl_get_global_option $2 "Cron" | zaf_far '{PLUGINDIR}' "${plugindir}" >$ZAF_CROND/zaf_$plugin || zaf_err "Error during zaf_ctrl_cron"
 }

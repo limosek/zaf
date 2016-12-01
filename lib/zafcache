@@ -19,16 +19,8 @@ else
 fi
 
 if ! zaf_fromcache "$key"; then
-	zaf_fromcache "$key" >/dev/null 2>/dev/null
-	[ $? -eq 3 ] && { zaf_err "Operation $key already in progress."; }
-	if zaf_which at >/dev/null 2>/dev/null; then
-		at -M now >/dev/null 2>/dev/null <<EOF
-		. $(dirname $0)/preload.sh; tmpf=\$(zaf_tmpfile cache); $@ 2>"\$tmpf" | zaf_tocache_stdin "$key" "$seconds" ; [ -s \$tmpf ] && zaf_wrn <\$tmpf
-EOF
-	else
-		tmpf=$(zaf_tmpfile cache)
-		$@ 2>"$tmpf" | zaf_tocache_stdin "$key" "$seconds" 
-		[ -s $tmpf ] && zaf_wrn <$tmpf
-	fi
+	tmpf=$(zaf_tmpfile cache)
+	$@ 2>"$tmpf" | zaf_tocache_stdin "$key" "$seconds" 
+	[ -s $tmpf ] && zaf_wrn <$tmpf
 fi
 

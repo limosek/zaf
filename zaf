@@ -59,6 +59,18 @@ cache-clean)
 cache-list)
 	zaf_cache_list
 	;;
+cache-test1)
+	for i in test1 test2 test3; do
+		echo "To cache:"
+		echo "$i" | zaf_tocache_stdin "test" 10
+	done
+	;;
+cache-test2)
+	for i in test1 test2 test3; do
+		echo "From cache:"
+		zaf_fromcache "test"
+	done
+	;;
 
 version)
 	echo "$ZAF_VERSION<git $ZAF_GITBRANCH>"

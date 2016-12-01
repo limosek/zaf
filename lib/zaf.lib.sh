@@ -12,12 +12,15 @@ zaf_msg() {
 }
 zaf_trc() {
 	[ "$ZAF_DEBUG" -ge "3" ] && logger -p user.info ${ZAF_LOG_STDERR} -t zaf-trace -- $@
+	return 0
 }
 zaf_dbg() {
 	[ "$ZAF_DEBUG" -ge "2" ] && logger -p user.debug ${ZAF_LOG_STDERR} -t zaf-debug -- $@
+	return 0
 }
 zaf_wrn() {
 	[ "$ZAF_DEBUG" -ge "1" ] && logger -p user.warn ${ZAF_LOG_STDERR} -t zaf-warning -- $@
+	return 0
 }
 zaf_err() {
 	logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error -- $@

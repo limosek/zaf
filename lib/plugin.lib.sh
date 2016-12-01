@@ -101,15 +101,19 @@ zaf_install_plugin() {
 	local url
 	local plugin
 	local plugindir
+	local tmpplugindir
 	local control
 	local version
 
-	if zaf_prepare_plugin "$1" "${ZAF_TMP_DIR}/plugin"; then
+	plugin=$(basename "$1")
+	tmpplugindir="${ZAF_TMP_DIR}/zaf-installer/$plugin"
+	mkdir -p $tmpplugindir
+	if zaf_prepare_plugin "$1" "$tmpplugindir"; then
 		url=$(zaf_get_plugin_url "$1")
-		control="${ZAF_TMP_DIR}/plugin/control.zaf"
+		control="$tmpplugindir/control.zaf"
                 plugin=$(zaf_ctrl_get_global_option $control Plugin)
 		version=$(zaf_ctrl_get_global_option $control Version)
-		plugindir="${ZAF_PLUGINS_DIR}"/$plugin
+		plugindir="${ZAF_PLUGINS_DIR}/$plugin"
 		if [ -n "$plugin" ] && zaf_prepare_plugin "$1" $plugindir; then
 			zaf_wrn "Installing plugin $plugin version $version"
 			zaf_dbg "Source url: $url, Destination dir: $plugindir"
@@ -129,6 +133,7 @@ zaf_install_plugin() {
         else
             	zaf_err "Cannot prepare plugin $1"
 	fi
+	rm -rf $tmpplugindir
 }
 
 # List installed plugins
