@@ -130,10 +130,12 @@ zaf_ctrl_get_extitem_option() {
 # Check dependencies based on control file
 zaf_ctrl_check_deps() {
 	local deps
-	deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-${ZAF_PKG}" )
+	if [ -n "$ZAF_PKG" ]; then
+		deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-${ZAF_PKG}" )
 
-	if ! zaf_os_specific zaf_check_deps $deps; then
-		zaf_err "Missing one of dependend system packages: $deps"
+		if ! zaf_os_specific zaf_check_deps $deps; then
+			zaf_err "Missing one of dependend system packages: $deps"
+		fi
 	fi
 	deps=$(zaf_ctrl_get_global_block <$1 | zaf_block_get_option "Depends-bin" )
 	for cmd in $deps; do
