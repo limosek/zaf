@@ -46,35 +46,56 @@ zaf_tocache(){
 	local key
 	local value
 	local expiry
+	local lockfile
+	local infofile
+	local datafile
 
 	key=$(zaf_cache_key "$1")
-	rm -f $ZAF_CACHE_DIR/$key $ZAF_CACHE_DIR/${key}.info
-	echo "$2" >$ZAF_CACHE_DIR/$key
-	echo "$1" >$ZAF_CACHE_DIR/${key}.info
+	datafile=$ZAF_CACHE_DIR/$key
+	lockfile=$ZAF_CACHE_DIR/${key}.lock
+	infofile=$ZAF_CACHE_DIR/${key}.info
+
+	[ -f $lockfile ] && return 1	# Key is locked, return
+	touch $lockfile
+	rm -f $datafile $infofile
+	echo "$2" >$datafile
+	echo "$1" >$infofile
 	expiry=$(zaf_date_add "$3")
 	zaf_trc "Cache: Saving entry $1[$key,expiry=$expiry]"
-	touch -m -d "$expiry" $ZAF_CACHE_DIR/${key}.info
+	touch -m -d "$expiry" $infofile
+	rm -f $lockfile
 }
 
 # Put object into cache from stdin and copy to stdout
 # $1 key
 # $2 lifetime in seconds
 zaf_tocache_stdin(){
-	! [ -w $ZAF_CACHE_DIR ] && return 1
+	! [ -w $ZAF_CACHE_DIR ] && { cat; return 1; }
 	local key
 	local expiry
+	local lockfile
+	local infofile
+	local datafile
 
 	key=$(zaf_cache_key "$1")
-	rm -f $ZAF_CACHE_DIR/$key $ZAF_CACHE_DIR/${key}.info
-	cat >$ZAF_CACHE_DIR/$key
-	if [ -s $ZAF_CACHE_DIR/$key ]; then
+	datafile=$ZAF_CACHE_DIR/$key
+	lockfile=$ZAF_CACHE_DIR/${key}.lock
+	infofile=$ZAF_CACHE_DIR/${key}.info
+
+	[ -f $lockfile ] && return 1	# Key is locked, return
+	touch $lockfile
+
+	rm -f $datafile $infofile
+	cat >$datafile
+	if [ -s $datafile ]; then
 		expiry="$(zaf_date_add $2)"
-		echo "$1 [key=$key,expiry=$expiry]" >$ZAF_CACHE_DIR/${key}.info
+		echo "$1 [key=$key,expiry=$expiry]" >$infofile
 		zaf_trc "Cache: Saving entry $1[key=$key,expiry=$expiry]"
-		touch -m -d "$expiry" $ZAF_CACHE_DIR/$key.info
-		cat $ZAF_CACHE_DIR/$key
+		touch -m -d "$expiry" $infofile
+		cat $datafile
+		rm -f $lockfile
 	else
-		rm -f "$ZAF_CACHE_DIR/$key"
+		rm -f "$datafile"
 	fi
 }
 
@@ -104,12 +125,18 @@ zaf_fromcache(){
 	! [ -r $ZAF_CACHE_DIR ] || [ -n "$ZAF_NOCACHE" ] && return 1
 	local key
 	local value
+	local infofile
+	local datafile
+
 	key=$(zaf_cache_key "$1")
-	if [ -f $ZAF_CACHE_DIR/$key ]; then
-		! [ -f "$ZAF_CACHE_DIR/$key.info" ] && { return 3; }
-		if [ "$ZAF_CACHE_DIR/$key.info" -nt "$ZAF_CACHE_DIR/$key" ]; then
+	datafile=$ZAF_CACHE_DIR/$key
+	infofile=$ZAF_CACHE_DIR/${key}.info
+
+	if [ -f $datafile ]; then
+		! [ -f "$infofile" ] && { return 3; }
+		if [ "$infofile" -nt "$datafile" ]; then
 			zaf_trc "Cache: serving $1($key) from cache"
-			cat $ZAF_CACHE_DIR/$key
+			cat $datafile
 		else
 			zaf_trc "Cache: removing old entry $1"
 			rm -f "$ZAF_CACHE_DIR/$key*"
@@ -120,4 +147,5 @@ zaf_fromcache(){
 		return 1
 	fi
 }
+
 
