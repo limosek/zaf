@@ -280,6 +280,7 @@ zaf_configure(){
 	zaf_get_option ZAF_ZBXAPI_USER "Zabbix API user" "zaf" "$INSTALL_MODE"
 	zaf_get_option ZAF_ZBXAPI_PASS "Zabbix API password" "" "$INSTALL_MODE"
 	zaf_get_option ZAF_ZBXAPI_AUTHTYPE "Zabbix API authentication type" "internal" "$INSTALL_MODE"
+	zaf_get_option ZAF_PLUGINS "Plugins to autoinstall" "" "$INSTALL_MODE"
 
 	if zaf_is_root && ! [ -x $ZAF_AGENT_BIN ]; then
 		zaf_err "Zabbix agent ($ZAF_AGENT_BIN) not installed? Use ZAF_AGENT_BIN env variable to specify location. Exiting."
@@ -329,7 +330,11 @@ zaf_configure(){
 	zaf_set_option ZAF_ZBXAPI_USER "$ZAF_ZBXAPI_USER"
 	zaf_set_option ZAF_ZBXAPI_PASS "$ZAF_ZBXAPI_PASS"
 	zaf_set_option ZAF_ZBXAPI_AUTHTYPE "$ZAF_ZBXAPI_AUTHTYPE"
-	[ -n "$ZAF_PREPACKAGED_DIR" ] && zaf_set_option ZAF_PREPACKAGED_DIR "$ZAF_PREPACKAGED_DIR"
+	if [ -n "$ZAF_PLUGINS" ]; then
+		for p in $ZAF_PLUGINS; do
+			zaf_install_plugin $p
+		done
+	fi
 
 	if zaf_is_root; then
         	zaf_configure_agent $ZAF_AGENT_OPTIONS "$@"

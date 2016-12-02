@@ -84,16 +84,20 @@ zaf_prepare_plugin() {
 	local url
 	local plugindir
 	local control
+	local pluginname
 
 	url=$(zaf_get_plugin_url "$1")/control.zaf || exit $?
 	plugindir="$2"
 	control=${plugindir}/control.zaf
 	zaf_install_dir "$plugindir"
 	zaf_dbg "Fetching control file from $url ..."
-	if zaf_fetch_url "$url" >"${control}"; then
-		zaf_ctrl_check_deps "${control}"
+	if zaf_fetch_url "$url" >"${INSTALL_PREFIX}/${control}"; then
+		[ -z "${INSTALL_PREFIX}" ] && zaf_ctrl_check_deps "${control}"
+		pluginname=$(zaf_ctrl_get_global_block <"${INSTALL_PREFIX}/${control}" | zaf_block_get_option Plugin)
+		[ "$(basename $plugindir)" != "$pluginname" ] && zaf_err "prepare_plugin: Plugin name mismach ($plugindir vs $pluginname)!"
+		true
 	else
-		zaf_err "prepare_plugin: Cannot fetch or write control file $control from url $url!"
+		zaf_err "prepare_plugin: Cannot fetch or write control file ${INSTALL_PREFIX}/$control from url $url!"
 	fi
 }
 
@@ -106,35 +110,51 @@ zaf_install_plugin() {
 	local version
 
 	plugin=$(basename "$1")
-	tmpplugindir="${ZAF_TMP_DIR}/zaf-installer/$plugin"
-	mkdir -p $tmpplugindir
-	if zaf_prepare_plugin "$1" "$tmpplugindir"; then
-		url=$(zaf_get_plugin_url "$1")
-		control="$tmpplugindir/control.zaf"
-                plugin=$(zaf_ctrl_get_global_option $control Plugin)
-		version=$(zaf_ctrl_get_global_option $control Version)
-		plugindir="${ZAF_PLUGINS_DIR}/$plugin"
-		if [ -n "$plugin" ] && zaf_prepare_plugin "$1" $plugindir; then
-			zaf_wrn "Installing plugin $plugin version $version"
-			zaf_dbg "Source url: $url, Destination dir: $plugindir"
-			control=${plugindir}/control.zaf
-			[ "$ZAF_DEBUG" -gt 1 ] && zaf_plugin_info "${control}"
+	plugindir="${ZAF_PLUGINS_DIR}/${plugin}"
+	if [ -n "$plugin" ] && zaf_prepare_plugin "$1" $plugindir; then
+		zaf_wrn "Installing plugin $plugin"
+		zaf_dbg "Source url: $url, Destination dir: $plugindir"
+		control=${plugindir}/control.zaf
+		[ "$ZAF_DEBUG" -gt 1 ] && zaf_plugin_info "${control}"
+		if [ -z "${INSTALL_PREFIX}" ]; then
 			zaf_ctrl_check_deps "${control}"
 			zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_cron "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
-			zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}" 
-			zaf_ctrl_install "$url" "${control}" "${plugindir}"
+			zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}"
 		else
-			zaf_err "Cannot install plugin '$plugin' to $plugindir!"
+			zaf_touch "${plugindir}/needinstall"
 		fi
-        else
-            	zaf_err "Cannot prepare plugin $1"
+		zaf_ctrl_install "$url" "${control}" "${plugindir}"
+	else
+		zaf_err "Cannot install plugin '$plugin' to $plugindir!"
 	fi
-	rm -rf $tmpplugindir
 }
+
+zaf_postinstall_plugin() {
+	local url
+	local plugin
+	local plugindir
+	local tmpplugindir
+	local control
+	local version
+
+	plugin=$(basename "$1")
+	plugindir="${ZAF_PLUGINS_DIR}/${plugin}"
+	control=${plugindir}/control.zaf
+	[ "$ZAF_DEBUG" -gt 1 ] && zaf_plugin_info "${control}"
+	zaf_ctrl_check_deps "${control}"
+	zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
+	zaf_ctrl_cron "$plugin" "${control}" "${plugindir}"
+	zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
+	  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+	zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
+	zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}"
+	zaf_ctrl_install "$url" "${control}" "${plugindir}"
+}
+
 
 # List installed plugins
 # $1 - plugin

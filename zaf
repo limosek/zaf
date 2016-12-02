@@ -88,13 +88,21 @@ userparms)
 	done
 	;;
 agent-config)
+	for p in $(zaf_list_plugins); do
+		if [ -f "$ZAF_PLUGINS_DIR/$p/needinstall" ]; then
+			zaf_wrn "Calling postinstalation of plugin $p"
+			zaf_postinstall_plugin $p && rm -f "$ZAF_PLUGINS_DIR/$p/needinstall"
+		fi
+	done
 	zaf_wrn "Generating config files in $ZAF_AGENT_CONFIGD ..."
 	for plugin in $(zaf_list_plugins); do
 		plugindir=$ZAF_PLUGINS_DIR/$plugin
 		control=$plugindir/control.zaf
-		zaf_dbg "Generating ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
-		zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
+		if ! [ -f  "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ "$control" -nt "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ -n "$2" ]; then
+			zaf_dbg "Generating ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
+			zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+		fi
 	done
 	;;
 server-config)
@@ -442,7 +450,7 @@ api)
 	echo
 	echo "Agent config info commands:"
 	zaf_hlp "$0 userparms" "See userparms generated from zaf on stdout"
-	zaf_hlp "$0 agent-config" "Reconfigure zabbix userparms in $ZAF_AGENT_CONFIGD"
+	zaf_hlp "$0 agent-config [force]" "Reconfigure zabbix userparms in $ZAF_AGENT_CONFIGD"
 	echo
 	echo "Zaf related commands:"
 	zaf_hlp "$0 self-upgrade" "To self-upgrade zaf"

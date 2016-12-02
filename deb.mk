@@ -28,7 +28,7 @@ deb-control:
 deb-scripts:
 	@. lib/zaf.lib.sh; \
 	. lib/ctrl.lib.sh; \
-	cat files/debian/postinst.template | zaf_far '{PLUGINS}' "$(PLUGINS)"  | zaf_far "{IPLUGINS}" "$(IPLUGINS)" | zaf_far '{ZAF_LIB_DIR}' "/usr/lib/zaf" >$(DEBIAN_CTRL)/postinst
+	cat files/debian/postinst.template >$(DEBIAN_CTRL)/postinst
 	@chmod +x $(DEBIAN_CTRL)/postinst
 	@cp files/debian/preinst.template $(DEBIAN_CTRL)/preinst
 	@chmod +x $(DEBIAN_CTRL)/preinst
@@ -37,20 +37,12 @@ deb-scripts:
 
 deb-cp:
 	@mkdir -p $(DEBIAN_DIR)
-	@set -e; INSTALL_PREFIX=$(DEBIAN_DIR) ZAF_DEBUG=$(ZAF_DEBUG) ./install.sh auto $(ZAF_OPTIONS) $(AGENT_OPTIONS)
-	@. lib/zaf.lib.sh; \
-	. lib/ctrl.lib.sh; \
-	for p in $(PLUGINS); do \
-		plugin=$$(zaf_ctrl_get_global_option $$p/control.zaf Plugin) ; \
-		mkdir -p $(DEBIAN_DIR)/usr/lib/zaf/prepackaged/$$plugin/; \
-	  	cp -R $$p/* $(DEBIAN_DIR)/usr/lib/zaf/prepackaged/$$plugin/; \
-	done
+	@set -e; INSTALL_PREFIX=$(DEBIAN_DIR) ZAF_DEBUG=$(ZAF_DEBUG) ./install.sh auto $(ZAF_OPTIONS) ZAF_PLUGINS="$(ZAF_PLUGINS)" $(AGENT_OPTIONS)
 	@cat lib/*lib.sh install.sh >$(DEBIAN_DIR)/usr/lib/zaf/install.sh
 	@chmod +x $(DEBIAN_DIR)/usr/lib/zaf/install.sh
 	@rm -rf $(DEBIAN_DIR)/tmp
 	@cp $(DEBIAN_DIR)/etc/zaf.conf tmp/zaf.conf
 	@grep -E "$$(echo $(ZAF_EXPORT_OPTS) | tr ' ' '|')=" tmp/zaf.conf  >$(DEBIAN_DIR)/etc/zaf.conf
-	@echo "ZAF_PREPACKAGED_DIR=\"/usr/lib/zaf/prepackaged\"" >>$(DEBIAN_DIR)/etc/zaf.conf
 ifneq ($(AGENT_OPTIONS),)
 	@echo "ZAF_AGENT_OPTIONS=\"$(AGENT_OPTIONS)\"" >>$(DEBIAN_DIR)/etc/zaf.conf
 endif
@@ -59,8 +51,7 @@ deb-package:
 	@dpkg-deb -b $(DEBIAN_DIR) $(DEBIAN_PKG)
 	@echo "\nCheck configuration:"
 	@cat $(DEBIAN_DIR)/etc/zaf.conf
-	@echo PLUGINS embedded: $(PLUGINS)
-	@echo PLUGINS in postinst: $(IPLUGINS)
+	@echo PLUGINS embedded: $(ZAF_PLUGINS)
 	@echo
 
 

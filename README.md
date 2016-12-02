@@ -81,6 +81,7 @@ ZAF_ZBXAPI_URL|Zabbix API url|http://localhost/zabbix/api_jsonrpc.php
 ZAF_ZBXAPI_USER|Zabbix API user|zaf
 ZAF_ZBXAPI_PASS|Zabbix API password|empty
 ZAF_ZBXAPI_AUTHTYPE|Zabbix API authentication type|internal
+ZAF_PLUGINS|Plugins to autoinstall|empty
 
 Installer will try to autoguess suitable config options for your system.
 Now everything was tested on Debian and OpenWrt. If somebody is interrested in, you can help and test with some rpm specific functions. Remember that on some systems, default zabbix agent config is empty so you *need to* enter essential config options as parameters.
