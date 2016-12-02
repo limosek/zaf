@@ -4,22 +4,11 @@ zaf_cache_init(){
 	local files
 	local file
 
-	if [ -z "$ZAF_CACHE_DIR" ] || [ "$ZAF_CACHE_DIR" = "/tmp/zafc/" ]; then
-		ZAF_CACHE_DIR=${ZAF_TMP_DIR}/zafc
+	if [ "$ZAF_CACHE_DIR" = "/tmp/zafc" ] && ! [ -d "$ZAF_CACHE_DIR" ]; then
 		mkdir -p $ZAF_CACHE_DIR
 		chown $ZAF_FILES_UID $ZAF_CACHE_DIR >/dev/null 2>/dev/null
 	fi
-	if [ -w $ZAF_CACHE_DIR ]; then
-		zaf_trc "Cache: Removing stale entries"
-		files=$(find $ZAF_CACHE_DIR/ -type f -name '*.lock' -mmin +1)
-		[ -n "$files" ] && rm -f $files
-		(cd $ZAF_CACHE_DIR && find ./ -type f -name '*.info' -mmin +1 2>/dev/null | \
-		while read line ; do
-			 file=$(basename $line .info)
-			 [ "$line" -nt "$file" ] && { rm ${file}*; zaf_trc "rm ${file}*"; }
-		done
-		)
-	else
+	if ! [ -w $ZAF_CACHE_DIR ]; then
 		zaf_dbg "Cache dir $ZAF_CACHE_DIR is not accessible! Disabling cache."
 	fi
 }
@@ -27,7 +16,7 @@ zaf_cache_init(){
 zaf_cache_clean(){
 	local files
 
-	if [ -n "$ZAF_CACHE_DIR" ]; then
+	if [ -w "$ZAF_CACHE_DIR" ]; then
 		zaf_wrn "Removing cache entries"
 		files=$(find $ZAF_CACHE_DIR/ -type f)
 		[ -n "$files" ] && rm -f $files
@@ -128,6 +117,7 @@ zaf_cache_delentry(){
 
 # List entries in cache
 zaf_cache_list(){
+	! [ -w $ZAF_CACHE_DIR ] && return 1
 	local i
 	ls ${ZAF_CACHE_DIR}/*info >/dev/null 2>/dev/null || return 1
 	local key
@@ -139,7 +129,7 @@ zaf_cache_list(){
 # Get object from cache
 # $1 key
 zaf_fromcache(){
-	! [ -r $ZAF_CACHE_DIR ] || [ -n "$ZAF_NOCACHE" ] && return 1
+	! [ -w $ZAF_CACHE_DIR ] && return 3
 	local key
 	local value
 	local infofile
@@ -150,13 +140,11 @@ zaf_fromcache(){
 	infofile="${ZAF_CACHE_DIR}/${key}.info"
 
 	if [ -f $datafile ]; then
-		#zaf_cache_lock $key || return 3
-		#zaf_cache_unlock $key
 		if [ "$infofile" -nt "$datafile" ]; then
 			zaf_trc "Cache: serving $1($key) from cache"
-			cat "$datafile" || { ls -la "$datafile" >&2; zaf_err "auuu: $1";  }
+			cat "$datafile"
 		else
-			#zaf_cache_delentry $key
+			zaf_cache_delentry $key
 			return 2
 		fi
 	else

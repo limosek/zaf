@@ -97,6 +97,9 @@ agent-config)
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 	done
 	;;
+server-config)
+	zaf_wrn "Not implemented yet"
+	;;
 
 ###### Plugins related commands
 update)

@@ -76,19 +76,15 @@ zaf_block_get_option() {
 zaf_ctrl_get_global_option() {
 	local ctrlvar
 	local ctrlopt
-	local key
-
-	key="$1-$2"
-	if ! zaf_fromcache $key; then 
-		ctrlopt="ZAF_CTRL_$(zaf_stripctrl $2)"
-		eval ctrlvar=\$$ctrlopt
-		if [ -n "$ctrlvar" ]; then
-			zaf_dbg "Overriding control field $2 from env $ctrlopt($ctrlvar)"
-			echo $ctrlopt
-		else
-			zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" \
-			|| zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
-		fi | zaf_tocache_stdin "$key" "600" 
+	
+	ctrlopt="ZAF_CTRL_$(zaf_stripctrl $2)"
+	eval ctrlvar=\$$ctrlopt
+	if [ -n "$ctrlvar" ]; then
+		zaf_dbg "Overriding control field $2 from env $ctrlopt($ctrlvar)"
+		echo $ctrlopt
+	else
+		zaf_ctrl_get_global_block <$1 | zaf_block_get_moption "$2" \
+		|| zaf_ctrl_get_global_block <$1 | zaf_block_get_option "$2"
 	fi
 }
 
@@ -99,19 +95,15 @@ zaf_ctrl_get_global_option() {
 zaf_ctrl_get_item_option() {
 	local ctrlvar
 	local ctrlopt
-	local key
 
-	key="i$1-$2-$3"
-	if ! zaf_fromcache "$key"; then
-		ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
-		eval ctrlvar=\$$ctrlopt
-		if [ -n "$ctrlvar" ]; then
-			zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
-			echo $ctrlopt
-		else
-			zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" \
-			|| zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
-		fi | zaf_tocache_stdin "$key" "600" 
+	ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
+	eval ctrlvar=\$$ctrlopt
+	if [ -n "$ctrlvar" ]; then
+		zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
+		echo $ctrlopt
+	else
+		zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_moption "$3" \
+		|| zaf_ctrl_get_item_block <$1 "$2" | zaf_block_get_option "$3"
 	fi 
 }
 
@@ -122,19 +114,15 @@ zaf_ctrl_get_item_option() {
 zaf_ctrl_get_extitem_option() {
 	local ctrlvar
 	local ctrlopt
-	local key
 
-	key="e$1-$2-$3"
-	if ! zaf_fromcache "$key"; then
-		ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
-		eval ctrlvar=\$$ctrlopt
-		if [ -n "$ctrlvar" ]; then
-			zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
-			echo $ctrlopt
-		else
-			zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_moption "$3" \
-			|| zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_option "$3"
-		fi | zaf_tocache_stdin "$key" "600" 
+	ctrlopt="ZAF_CTRLI_$(zaf_stripctrl $2)_$(zaf_stripctrl $3)"
+	eval ctrlvar=\$$ctrlopt
+	if [ -n "$ctrlvar" ]; then
+		zaf_dbg "Overriding item control field $2/$3 from env $ctrlopt($ctrlvar)"
+		echo $ctrlopt
+	else
+		zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_moption "$3" \
+		|| zaf_ctrl_get_extitem_block <$1 "$2" | zaf_block_get_option "$3"
 	fi
 }
 
