@@ -88,17 +88,19 @@ userparms)
 	done
 	;;
 agent-config)
+	[ -n "$2" ] && force=yes
 	for p in $(zaf_list_plugins); do
-		if [ -f "$ZAF_PLUGINS_DIR/$p/needinstall" ]; then
+		if [ -f "$ZAF_PLUGINS_DIR/$p/postinst.need" ]; then
 			zaf_wrn "Calling postinstalation of plugin $p"
-			zaf_postinstall_plugin $p && rm -f "$ZAF_PLUGINS_DIR/$p/needinstall"
+			zaf_postinstall_plugin $p && rm -f "$ZAF_PLUGINS_DIR/$p/postinst.need"
+			force=yes
 		fi
 	done
 	zaf_wrn "Generating config files in $ZAF_AGENT_CONFIGD ..."
 	for plugin in $(zaf_list_plugins); do
 		plugindir=$ZAF_PLUGINS_DIR/$plugin
 		control=$plugindir/control.zaf
-		if ! [ -f  "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ "$control" -nt "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ -n "$2" ]; then
+		if ! [ -f  "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ "$control" -nt "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ -n "$force" ]; then
 			zaf_dbg "Generating ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 			zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
 			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf

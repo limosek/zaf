@@ -104,14 +104,13 @@ git clone https://github.com/limosek/zaf.git \
  && cd zaf \
  && git checkout master \
  && git clone https://github.com/limosek/zaf-plugins.git \
- && make deb PLUGINS="./zaf-plugins/fsx" IPLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
+ && make deb PLUGINS="./zaf-plugins/fsx" ZAF_PLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
 sudo dpkg -i out/zaf-1.3master.deb
 ```
 General usage:
 ```
-make {deb|ipk|rpm} [PLUGINS="/dir/plg1 [/dir2]...] [IPLUGINS="plg1 [plg2]..."] [ZAF_OPTIONS="ZAF_cfg=val ..."] [AGENT_OPTIONS="Z_Server=host ..."]
-PLUGINS are embedded into package. Has to be local directories accessible during build.
-IPLUGINS will be downloaded and installed after package is installed. Can be name or url accessible after package installation.
+make {deb|ipk|rpm} [ZAF_PLUGINS="plg1 [plg2]" [ZAF_OPTIONS="ZAF_cfg=val ..."] [AGENT_OPTIONS="Z_Server=host ..."]
+ZAF_PLUGINS are embedded into package. Has to be local directories accessible during build.
 ```
 
 ## Zaf plugin

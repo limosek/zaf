@@ -56,7 +56,7 @@ zaf_cache_unlock(){
 # $2 value
 # $3 lifetime in seconds
 zaf_tocache(){
-	! [ -w $ZAF_CACHE_DIR ] && return 1
+	! [ -w $ZAF_CACHE_DIR ] && return
 	local key
 	local value
 	local expiry
@@ -82,7 +82,7 @@ zaf_tocache(){
 # $1 key
 # $2 lifetime in seconds
 zaf_tocache_stdin(){
-	! [ -w $ZAF_CACHE_DIR ] && { cat; return 1; }
+	! [ -w $ZAF_CACHE_DIR ] && { cat; return; }
 	local key
 	local expiry
 	local infofile

@@ -109,6 +109,20 @@ zaf_fetch_url() {
 	esac 
 }
 
+# Get info about url
+# returns  path or url
+zaf_url_info() {
+	if echo "$1" | grep -q '^/'; then
+		echo "path"
+	else
+		if echo "$1" | grep -q ^http; then
+			echo "url"
+		else
+			echo "unknown"
+		fi
+	fi
+}
+
 # Find and replace string
 zaf_far(){
    local f

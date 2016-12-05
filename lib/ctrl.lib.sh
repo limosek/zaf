@@ -219,8 +219,6 @@ zaf_ctrl_install() {
 		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
                 zaf_install "${ZAF_TMP_DIR}/$b" "$pdir"
 	done
-	script=$(zaf_ctrl_get_global_option $2 "Install-script")
-	[ -n "$script" ] && eval "$script"
 	true
 	) || zaf_err "Error during zaf_ctrl_install"
 }

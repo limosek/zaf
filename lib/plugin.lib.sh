@@ -18,24 +18,16 @@ zaf_update_repo() {
 zaf_get_plugin_url() {
 	local url
 
-	if echo "$1" | grep -q '/'; then
+	if [ "$(zaf_url_info $1)" = "path" ]; then
 		url="$1" 		# plugin with path - from directory
 	else
-		if echo "$1" | grep -q ^http; then
+		if [ "$(zaf_url_info $1)" = "url" ]; then
 			url="$1"	# plugin with http[s] url 
 		else
-			if [ -d "${ZAF_REPO_DIR}/$1" ]; then
-				url="${ZAF_REPO_DIR}/$1"
+			if [ -n "${ZAF_REPO_URL}" ]; then
+					url="${ZAF_REPO_URL}/$1" 
 			else
-				if [ -n "${ZAF_PREPACKAGED_DIR}" ] &&  [ -d "${ZAF_PREPACKAGED_DIR}/$1" ]; then
-					url="${ZAF_PREPACKAGED_DIR}/$1"
-				else
-					if [ -n "${ZAF_REPO_URL}" ]; then
-						url="${ZAF_REPO_URL}/$1" 
-					else
-						zaf_err "Cannot find plugin $1"
-					fi
-				fi
+					zaf_err "Cannot find plugin $1"
 			fi
 		fi
 	fi
@@ -89,14 +81,18 @@ zaf_prepare_plugin() {
 	url=$(zaf_get_plugin_url "$1")/control.zaf || exit $?
 	plugindir="$2"
 	control=${plugindir}/control.zaf
+	if [ "$(zaf_url_info $1)" = "path" ] && cmp -s "$url" "$control"; then
+		zaf_err "prepare_plugin: Cannot install from itself!"
+	fi
 	zaf_install_dir "$plugindir"
 	zaf_dbg "Fetching control file from $url ..."
 	if zaf_fetch_url "$url" >"${INSTALL_PREFIX}/${control}"; then
 		[ -z "${INSTALL_PREFIX}" ] && zaf_ctrl_check_deps "${control}"
 		pluginname=$(zaf_ctrl_get_global_block <"${INSTALL_PREFIX}/${control}" | zaf_block_get_option Plugin)
-		[ "$(basename $plugindir)" != "$pluginname" ] && zaf_err "prepare_plugin: Plugin name mismach ($plugindir vs $pluginname)!"
+		[ "$(basename $plugindir)" != "$pluginname" ] && zaf_err "prepare_plugin: Plugin name mismach ($plugindir vs ${INSTALL_PREFIX}/${control})!"
 		true
 	else
+		rm -rf "$plugindir"
 		zaf_err "prepare_plugin: Cannot fetch or write control file ${INSTALL_PREFIX}/$control from url $url!"
 	fi
 }
@@ -112,6 +108,7 @@ zaf_install_plugin() {
 	plugin=$(basename "$1")
 	plugindir="${ZAF_PLUGINS_DIR}/${plugin}"
 	if [ -n "$plugin" ] && zaf_prepare_plugin "$1" $plugindir; then
+		url=$(zaf_get_plugin_url "$1")
 		zaf_wrn "Installing plugin $plugin"
 		zaf_dbg "Source url: $url, Destination dir: $plugindir"
 		control=${plugindir}/control.zaf
@@ -125,7 +122,7 @@ zaf_install_plugin() {
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 			zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}"
 		else
-			zaf_touch "${plugindir}/needinstall"
+			zaf_touch "${plugindir}/postinst.need"
 		fi
 		zaf_ctrl_install "$url" "${control}" "${plugindir}"
 	else
@@ -152,7 +149,6 @@ zaf_postinstall_plugin() {
 	  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 	zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 	zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}"
-	zaf_ctrl_install "$url" "${control}" "${plugindir}"
 }
 
 
