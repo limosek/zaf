@@ -5,6 +5,9 @@ if [ -z "$ZAF_URL" ]; then
 	# Runing as standalone install.sh. We have to download rest of files first.
 	ZAF_URL="https://github.com/limosek/zaf/"
 fi
+if [ -z "$ZAF_RAW_URL" ]; then
+	ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
+fi
 
 [ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=master
 
@@ -12,8 +15,12 @@ fi
 
 # Lite version of zaf_fetch_url, full version will be loaded later
 zaf_fetch_url(){
-	echo  curl -f -k -s -L -o - "$1" >&2;
-	curl -f -k -s -L -o - "$1"
+	if zaf_which curl >/dev/null 2>/dev/null; then
+		echo  curl -f -k -s -L -o - "$1" >&2;
+		curl -f -k -s -L -o - "$1"
+	else
+		wget --no-check-certificate -O - "$1"
+	fi
 }
 
 # Lite version of zaf_which, full version will be loaded later
@@ -401,17 +408,17 @@ zaf_postconfigure() {
 if ! [ -f README.md ]; then
 	# Hardcoded variables
 	ZAF_VERSION="1.3"
-	ZAF_URL="https://github.com/limosek/zaf"
-	ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 	export ZAF_TMP_DIR="/tmp/zaf-installer"
 	export ZAF_DIR="$ZAF_TMP_DIR/zaf"
 	if [ -n "$ZAF_PROXY" ]; then
 		export ALL_PROXY="$ZAF_PROXY"
+		export http_proxy="$ZAF_PROXY"
+		export https_proxy="$ZAF_PROXY"
 	fi
 	mkdir -p $ZAF_TMP_DIR
-	if ! zaf_which curl >/dev/null;
+	if ! zaf_which curl >/dev/null &&  ! zaf_which wget >/dev/null;
 	then
-		zaf_err "Curl not found. Cannot continue. Please install it."
+		zaf_err "Curl or wget not found. Cannot continue. Please install it."
 	fi
 	echo "Installing from url $url..."
 	[ -z "$*" ] && auto=auto

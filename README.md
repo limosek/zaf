@@ -30,6 +30,14 @@ You need to be root and you must have curl installed on your system. Depending o
 ```
 curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
 ```
+If you have only wget installed:
+```
+wget --no-check-certificate -O - https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
+```
+If you do not have https support (like openwrt)
+```
+wget -O - http://github.macura.cz/zaf/install.sh| ZAF_RAW_URL=http://github.macura.cz/zaf/install.sh ZAF_REPO_URL=http://github.macura.cz/zaf-plugins/ sh 
+```
 
 ### Install options and autoconfiguration
 General parameters for install.sh on any system (simplest way how to install)

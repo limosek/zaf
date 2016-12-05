@@ -27,6 +27,8 @@ fi
 
 if [ -n "$ZAF_PROXY" ]; then
 	export ALL_PROXY="$ZAF_PROXY"
+	export http_proxy="$ZAF_PROXY"
+	export https_proxy="$ZAF_PROXY"
 fi
 
 if [ -f ./lib/zaf.lib.sh ]; then

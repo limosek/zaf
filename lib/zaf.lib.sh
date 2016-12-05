@@ -102,9 +102,15 @@ zaf_fetch_url() {
 	case $scheme in
 	http|https|ftp|file)
 		[ "$scheme" != "file" ] && [ -n "$ZAF_OFFLINE" ] && zaf_err "Cannot download $1 in offline mode!"
-		[ "${ZAF_CURL_INSECURE}" = "1" ] && insecure="-k"
-		zaf_dbg curl $insecure -f -s -L -o - $1
-		curl $insecure -f -s -L -o - "$1" | zaf_tocache_stdin "$1" 120
+		if zaf_which curl >/dev/null 2>/dev/null; then
+			[ "${ZAF_CURL_INSECURE}" = "1" ] && insecure="-k"
+			zaf_dbg curl $insecure -f -s -L -o - $1
+			curl $insecure -f -s -L -o - "$1" | zaf_tocache_stdin "$1" 120
+		else
+			[ "${ZAF_CURL_INSECURE}" = "1" ] && insecure="--no-check-certificate"
+			zaf_dbg wget $insecure -O - $1
+			wget $insecure -O - "$1" | zaf_tocache_stdin "$1" 120
+		fi
 	;;
 	esac 
 }
