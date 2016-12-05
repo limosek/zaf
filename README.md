@@ -34,9 +34,9 @@ If you have only wget installed:
 ```
 wget --no-check-certificate -O - https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
 ```
-If you do not have https support (like openwrt)
+If you do not have https support (like openwrt), I made small http mirror of github files which is synchronized each day:
 ```
-wget -O - http://github.macura.cz/zaf/install.sh| ZAF_RAW_URL=http://github.macura.cz/zaf/install.sh ZAF_REPO_URL=http://github.macura.cz/zaf-plugins/ sh 
+wget -O - http://github.macura.cz/zaf/install.sh| ZAF_RAW_URL=http://github.macura.cz/zaf/ ZAF_REPO_URL=http://github.macura.cz/zaf-plugins/ sh 
 ```
 
 ### Install options and autoconfiguration
