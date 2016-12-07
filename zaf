@@ -75,7 +75,7 @@ cache-test2)
 	;;
 
 version)
-	echo "$ZAF_VERSION<git $ZAF_GITBRANCH>"
+	echo "$ZAF_VERSION"
 	[ $ZAF_DEBUG -gt 1 ] && set |grep -E ^ZAF_ 
 	;;
 
