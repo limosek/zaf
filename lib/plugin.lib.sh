@@ -86,7 +86,7 @@ zaf_prepare_plugin() {
 	fi
 	zaf_install_dir "$plugindir"
 	zaf_dbg "Fetching control file from $url ..."
-	if zaf_fetch_url "$url" >"${INSTALL_PREFIX}/${control}"; then
+	if zaf_fetch_url "$url" >"${INSTALL_PREFIX}/${control}" && [ -s "${INSTALL_PREFIX}/${control}" ]; then
 		[ -z "${INSTALL_PREFIX}" ] && zaf_ctrl_check_deps "${control}"
 		pluginname=$(zaf_ctrl_get_global_block <"${INSTALL_PREFIX}/${control}" | zaf_block_get_option Plugin)
 		[ "$(basename $plugindir)" != "$pluginname" ] && zaf_err "prepare_plugin: Plugin name mismach ($plugindir vs ${INSTALL_PREFIX}/${control})!"

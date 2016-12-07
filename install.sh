@@ -338,7 +338,7 @@ zaf_configure(){
 	zaf_set_option ZAF_ZBXAPI_PASS "$ZAF_ZBXAPI_PASS"
 	zaf_set_option ZAF_ZBXAPI_AUTHTYPE "$ZAF_ZBXAPI_AUTHTYPE"
 	if [ -n "$ZAF_PLUGINS" ]; then
-		for p in $ZAF_PLUGINS; do
+		for p in $(echo $ZAF_PLUGINS | tr ',' ' '); do
 			zaf_install_plugin $p
 		done
 	fi
