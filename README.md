@@ -26,6 +26,9 @@ So zaf is here for you :)
 * Zabbix API support
 
 ## Installing Zaf
+
+Note: this instructions are for *trunk* version of zaf. For *stable* version, see https://github.com/limosek/zaf/tree/1.3
+
 You need to be root and you must have curl installed on your system. Depending on your system, github certificates may not be available so you have to use *-k* option for curl (insecure). Default installation type is silent. So there will be no questions and everything will be autodetected. This simple command should be used on most systems:
 ```
 curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
