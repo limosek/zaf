@@ -11,14 +11,14 @@ ZAF_CFG_FILE="/etc/zaf.conf"
 
 	# Read options as config for ZAF
 	for pair in "$@"; do
-    		if echo $pair | grep -qE '^ZAF\_(.*)='; then
-    			option=$(echo $pair|cut -d '=' -f 1)
-    			value=$(echo $pair|cut -d '=' -f 2-)
-    			eval "${option}='$value'"
+			if echo $pair | grep -qE '^ZAF\_(.*)='; then
+				option=$(echo $pair|cut -d '=' -f 1)
+				value=$(echo $pair|cut -d '=' -f 2-)
+				eval "${option}='$value'"
 			export secondstage=1
-    		else
+			else
 			params="$params $pair"
-    		fi
+			fi
 	done
 	export $(set |grep ^ZAF_ | cut -d '=' -f 1)
 	# If some variables in cmd were stripped, rerun only with right arguments and exported variables
@@ -86,7 +86,7 @@ userparms)
 		plugindir=$ZAF_PLUGINS_DIR/$plugin
 		control=$plugindir/control.zaf
 		zaf_ctrl_generate_items_cfg "${control}" "${plugin}" "noscripts" \
-			  | zaf_far '{PLUGINDIR}' "${plugindir}"
+		 | zaf_far '{PLUGINDIR}' "${plugindir}"
 	done
 	;;
 agent-config)
@@ -102,10 +102,10 @@ agent-config)
 	for plugin in $(zaf_list_plugins); do
 		plugindir=$ZAF_PLUGINS_DIR/$plugin
 		control=$plugindir/control.zaf
-		if ! [ -f  "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ "$control" -nt "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ -n "$force" ]; then
+		if ! [ -f "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ "$control" -nt "${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf" ] || [ -n "$force" ]; then
 			zaf_dbg "Generating ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 			zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
-			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+			 | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 		fi
 	done
 	;;
@@ -264,23 +264,23 @@ self-remove)
 	zaf_os_specific zaf_check_deps zaf && zaf_err "Zaf is installed as system package. Cannot self-remove."
 	. /etc/zaf.conf
 	if [ "$1" = "force" ]; then
-	  rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \
-		${ZAF_BIN_DIR}/zaf ${ZAF_AGENT_CONFIGD}/zaf_*
+		rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \
+		 ${ZAF_BIN_DIR}/zaf ${ZAF_AGENT_CONFIGD}/zaf_*
 	else
-	  echo "This will remove zaf from this computer and erase all configuration."
-	  echo "This command will be executed:"
-	  echo "rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \
+		echo "This will remove zaf from this computer and erase all configuration."
+		echo "This command will be executed:"
+		echo "rm -rf /etc/zaf.conf ${ZAF_PLUGINS_DIR} ${ZAF_REPO_DIR} ${ZAF_LIB_DIR} \
 		${ZAF_BIN_DIR}/zaf ${ZAF_AGENT_CONFIGD}/zaf_*"
-	  echo 
-	  echo "To continue, please do $0 self-remove force"
+		echo 
+		echo "To continue, please do $0 self-remove force"
 	fi
-      	;;
+			;;
 ###### API related commands
 api)
 	zaf_zbxapi_login
 	case $2 in
 	get-*-id)
- 		obj=$(echo $2|cut -d '-' -f 2)
+		obj=$(echo $2|cut -d '-' -f 2)
 		[ -z "$3" ] && zaf_err "$0 $1 $2 <$obj>"
 		eval zaf_zbxapi_get${obj}id "$3"
 		;;

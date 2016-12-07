@@ -19,7 +19,7 @@ zaf_get_plugin_url() {
 	local url
 
 	if [ "$(zaf_url_info $1)" = "path" ]; then
-		url="$1" 		# plugin with path - from directory
+		url="$1"		# plugin with path - from directory
 	else
 		if [ "$(zaf_url_info $1)" = "url" ]; then
 			url="$1"	# plugin with http[s] url 
@@ -118,7 +118,7 @@ zaf_install_plugin() {
 			zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_cron "$plugin" "${control}" "${plugindir}"
 			zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
-			  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+				| zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 			zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 			zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}"
 		else
@@ -146,7 +146,7 @@ zaf_postinstall_plugin() {
 	zaf_ctrl_sudo "$plugin" "${control}" "${plugindir}"
 	zaf_ctrl_cron "$plugin" "${control}" "${plugindir}"
 	zaf_ctrl_generate_items_cfg "${control}" "${plugin}" \
-	  | zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
+		| zaf_far '{PLUGINDIR}' "${plugindir}" >${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf
 	zaf_dbg "Generated ${ZAF_AGENT_CONFIGD}/zaf_${plugin}.conf"
 	zaf_ctrl_generate_extitems_cfg "${control}" "${plugin}"
 }
@@ -306,7 +306,7 @@ zaf_test_item() {
 }
 
 zaf_precache_item() {
-	cmd=$(grep "^UserParameter=$item" $ZAF_AGENT_CONFIGD/zaf*.conf  | cut -d ',' -f 2- | sed -e "s/_cache/_nocache/")
+	cmd=$(grep "^UserParameter=$item" $ZAF_AGENT_CONFIGD/zaf*.conf	| cut -d ',' -f 2- | sed -e "s/_cache/_nocache/")
 	zaf_wrn "Precaching item $item[$(echo $*| tr ' ' ',')] ($cmd)"
 	eval $cmd
 }

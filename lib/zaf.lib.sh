@@ -24,8 +24,8 @@ zaf_wrn() {
 }
 zaf_err() {
 	logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error -- $@
-        logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error "Exiting with error!"
-        exit 1
+				logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error "Exiting with error!"
+				exit 1
 }
 # Help option
 # $1 - key
@@ -75,7 +75,7 @@ zaf_agentparm(){
 		value="$default"
 	else
 		if [ -n "$regexp" ]; then
-			echo "$value" | grep -qE "$regexp" ||  zaf_err "$ITEM_KEY: Bad parameter '$name' value '$value' (not in regexp '$regexp')."
+			echo "$value" | grep -qE "$regexp" ||	 zaf_err "$ITEM_KEY: Bad parameter '$name' value '$value' (not in regexp '$regexp')."
 		fi
 	fi
 	eval $name=$value
@@ -116,7 +116,7 @@ zaf_fetch_url() {
 }
 
 # Get info about url
-# returns  path or url
+# returns	 path or url
 zaf_url_info() {
 	if echo "$1" | grep -q '^/'; then
 		echo "path"
@@ -131,41 +131,41 @@ zaf_url_info() {
 
 # Find and replace string
 zaf_far(){
-   local f
-   local t
-        local sedcmd="sed"
-        i=1
-        while [ "$i" -lt "$#" ];
-        do
-                eval f=\$${i}
-                i=$(expr $i + 1)
-                eval t=\$${i}
-                i=$(expr $i + 1)
-                sedcmd="$sedcmd -e 's~$f~$t~g'"
-        done
-   eval $sedcmd
+	 local f
+	 local t
+				local sedcmd="sed"
+				i=1
+				while [ "$i" -lt "$#" ];
+				do
+								eval f=\$${i}
+								i=$(expr $i + 1)
+								eval t=\$${i}
+								i=$(expr $i + 1)
+								sedcmd="$sedcmd -e 's~$f~$t~g'"
+				done
+	 eval $sedcmd
 }
 
 # Limit concurrent processes or continue
 zaf_bglimit(){
-    local maxbg
-    local maxnumber
-    local cnumber
-    [ -z "$BASH_VERSION" ] && { zaf_dbg "Job server not available. Use bash!"; return 1; }
-    if [ $# -eq 0 ] ; then
-            maxbg=5
-    else
-	    maxbg=$1
-    fi
-    maxnumber=$((0 + ${1:-0}))
-    while true; do
-            cnumber=$(jobs | wc -l)
-            if [ $cnumber -lt $maxnumber ]; then
-                    break
-            fi
-	    zaf_dbg "Limiting next job due to $maxbg limit of bg jobs"
-            sleep 1
-    done
+		local maxbg
+		local maxnumber
+		local cnumber
+		[ -z "$BASH_VERSION" ] && { zaf_dbg "Job server not available. Use bash!"; return 1; }
+		if [ $# -eq 0 ] ; then
+						maxbg=5
+		else
+			maxbg=$1
+		fi
+		maxnumber=$((0 + ${1:-0}))
+		while true; do
+						cnumber=$(jobs | wc -l)
+						if [ $cnumber -lt $maxnumber ]; then
+										break
+						fi
+			zaf_dbg "Limiting next job due to $maxbg limit of bg jobs"
+						sleep 1
+		done
 }
 
 # Initialises discovery function
@@ -178,27 +178,27 @@ EOF
 
 # Add row(s) to discovery data
 zaf_discovery_add_row(){
-  local rows
-  local row
+	local rows
+	local row
 
-  rows=$1
-  row=$2
-  shift;shift
-  echo " {"
-  while [ -n "$1" ]; do
-    echo -n '  "'$1'":"'$2'" '
-    shift;shift
-    if [ -n "$1" ]; then
+	rows=$1
+	row=$2
+	shift;shift
+	echo " {"
+	while [ -n "$1" ]; do
+		echo -n '	 "'$1'":"'$2'" '
+		shift;shift
+		if [ -n "$1" ]; then
 	echo ","
-    else
+		else
 	echo ""
-    fi
-  done
-  if [ "$row" -lt "$rows" ]; then
-  	echo " },"
-  else
+		fi
+	done
+	if [ "$row" -lt "$rows" ]; then
+		echo " },"
+	else
 	echo " }"
-  fi
+	fi
 }
 
 # Dumps json object
@@ -213,22 +213,22 @@ EOF
 # Arguments are name of variables to discovery.
 # Dumps json to stdout
 zaf_discovery(){
-  local tmpfile
-  local rows
-  local a b c d e f g h i j row
+	local tmpfile
+	local rows
+	local a b c d e f g h i j row
 
-  tmpfile="${ZAF_TMP_DIR}/disc$$"
-  cat >$tmpfile
-  rows=$(wc -l <$tmpfile)
-  local a b c d e f g h i j;
-  zaf_discovery_begin
-  row=1
-  while read a b c d e f g h i j; do
-    zaf_discovery_add_row "$rows" "$row" "$1" "${1:+${a}}" "$2" "${2:+${b}}" "$3" "${3:+${c}}" "$4" "${4:+${d}}" "$5" "${5:+${e}}" "$6" "${6:+${f}}" "$7" "${7:+${g}}" "$8" "${8:+${h}}" "$9" "${9:+${i}}"
-    row=$(expr $row + 1)
-  done <$tmpfile
-  zaf_discovery_end
-  rm -f $tmpfile
+	tmpfile="${ZAF_TMP_DIR}/disc$$"
+	cat >$tmpfile
+	rows=$(wc -l <$tmpfile)
+	local a b c d e f g h i j;
+	zaf_discovery_begin
+	row=1
+	while read a b c d e f g h i j; do
+		zaf_discovery_add_row "$rows" "$row" "$1" "${1:+${a}}" "$2" "${2:+${b}}" "$3" "${3:+${c}}" "$4" "${4:+${d}}" "$5" "${5:+${e}}" "$6" "${6:+${f}}" "$7" "${7:+${g}}" "$8" "${8:+${h}}" "$9" "${9:+${i}}"
+		row=$(expr $row + 1)
+	done <$tmpfile
+	zaf_discovery_end
+	rm -f $tmpfile
 }
 
 ############################################ Zaf internal routines

@@ -162,7 +162,7 @@ zaf_ctrl_sudo() {
 	! [ -d "$ZAF_SUDOERSD" ] && { zaf_wrn "$ZAF_SUDOERSD nonexistent! Skipping sudo install!"; return 1; }
 	zaf_dbg "Installing sudoers entry $ZAF_SUDOERSD/zaf_$plugin"
 	
-	[ -z "$sudo" ] && return  # Nothing to install
+	[ -z "$sudo" ] && return	# Nothing to install
 	if ! zaf_which sudo >/dev/null; then
 		zaf_wrn "Sudo needed bud not installed?"
 	fi
@@ -188,7 +188,7 @@ zaf_ctrl_cron() {
 	pdir="$3"
 	plugin=$1
 	cron=$(zaf_ctrl_get_global_option $2 "Cron")
-	[ -z "$cron" ]  || [ -z "$ZAF_CROND" ] && return
+	[ -z "$cron" ]	|| [ -z "$ZAF_CROND" ] && return
 	! [ -d "$ZAF_CROND" ] && { zaf_wrn "$ZAF_CROND nonexistent! Skipping cron install!"; return 1; }
 	zaf_dbg "Installing cron entry $ZAF_CROND/zaf_$plugin"
 	[ -z "$cron" ] && return # Nothing to install
@@ -212,12 +212,12 @@ zaf_ctrl_install() {
 	binaries=$(zaf_ctrl_get_global_option $2 "Install-bin")
 	for b in $binaries; do
 		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
-                zaf_install_bin "${ZAF_TMP_DIR}/$b" "$pdir"
+								zaf_install_bin "${ZAF_TMP_DIR}/$b" "$pdir"
 	done
 	files=$(zaf_ctrl_get_global_option $2 "Install-files")
 	for f in $files; do
 		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
-                zaf_install "${ZAF_TMP_DIR}/$b" "$pdir"
+								zaf_install "${ZAF_TMP_DIR}/$b" "$pdir"
 	done
 	true
 	) || zaf_err "Error during zaf_ctrl_install"
@@ -244,9 +244,9 @@ zaf_ctrl_generate_items_cfg() {
 	tmpfile=$ZAF_TMP_DIR/gencfg$$
 	(set -e
 	for i in $items; do
-            iscript=$(zaf_stripctrl $i)
-	    zaf_ctrl_get_item_option $1 $i "Parameters" >$tmpfile
-	    if [ -s "$tmpfile" ]; then
+						iscript=$(zaf_stripctrl $i)
+			zaf_ctrl_get_item_option $1 $i "Parameters" >$tmpfile
+			if [ -s "$tmpfile" ]; then
 		ikey="$2.$i[*]"
 		args=""
 		apos=1;
@@ -255,37 +255,37 @@ zaf_ctrl_generate_items_cfg() {
 			args="$args \$$apos"
 			apos=$(expr $apos + 1)
 		done <$tmpfile
-	    else
+			else
 		ikey="$2.$i"
 		zafparams=""
 		args=""
-	    fi
-	    env="export ITEM_KEY='$ikey'; export PLUGIN='$2'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
-	    lock=$(zaf_ctrl_get_item_option $1 $i "Lock")
-	    if [ -n "$lock" ]; then
+			fi
+			env="export ITEM_KEY='$ikey'; export PLUGIN='$2'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
+			lock=$(zaf_ctrl_get_item_option $1 $i "Lock")
+			if [ -n "$lock" ]; then
 		lock="${ZAF_LIB_DIR}/zaflock $lock "
-	    fi
-	    cache=$(zaf_ctrl_get_item_option $1 $i "Cache")
-	    if [ -n "$cache" ]; then
+			fi
+			cache=$(zaf_ctrl_get_item_option $1 $i "Cache")
+			if [ -n "$cache" ]; then
 		cache="${ZAF_LIB_DIR}/zafcache '$cache' "
-	    fi
-            cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
-            if [ -n "$cmd" ]; then
-                printf "%s" "UserParameter=$ikey,${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo
-                continue
-            fi
-            cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
-            if [ -n "$cmd" ]; then
-                ( echo "#!/bin/sh"
-		  echo ". $ZAF_LIB_DIR/preload.sh; "
-		  zaf_ctrl_get_item_option $1 $i "Script"
-		  ) >${ZAF_TMP_DIR}/${iscript}.sh;
-                [ -z "$3" ] && zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-                printf "%s" "UserParameter=$ikey,${env}${preload}${zafparams}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh ${args}"; echo
+			fi
+						cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
+						if [ -n "$cmd" ]; then
+								printf "%s" "UserParameter=$ikey,${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo
+								continue
+						fi
+						cmd=$(zaf_ctrl_get_item_option $1 $i "Script")
+						if [ -n "$cmd" ]; then
+								( echo "#!/bin/sh"
+			echo ". $ZAF_LIB_DIR/preload.sh; "
+			zaf_ctrl_get_item_option $1 $i "Script"
+			) >${ZAF_TMP_DIR}/${iscript}.sh;
+								[ -z "$3" ] && zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
+								printf "%s" "UserParameter=$ikey,${env}${preload}${zafparams}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh ${args}"; echo
 		rm -f ${ZAF_TMP_DIR}/${iscript}.sh
-                continue;
-            fi
-	    zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"
+								continue;
+						fi
+			zaf_err "Item $i declared in control file but has no Cmd, Function or Script!"
 	done
 	) || zaf_err "Error during zaf_ctrl_generate_items_cfg"
 	rm -f $tmpfile
@@ -312,10 +312,10 @@ zaf_ctrl_generate_extitems_cfg() {
 	tmpfile=$ZAF_TMP_DIR/gencfg$$
 	(set -e
 	for i in $items; do
-            iscript=$(zaf_stripctrl $i)
-	    zaf_ctrl_get_extitem_option $1 $i "Parameters" >$tmpfile
-	    ikey="$2.$i"
-	    if [ -s "$tmpfile" ]; then
+						iscript=$(zaf_stripctrl $i)
+			zaf_ctrl_get_extitem_option $1 $i "Parameters" >$tmpfile
+			ikey="$2.$i"
+			if [ -s "$tmpfile" ]; then
 		args=""
 		apos=1;
 		while read pname pdefault pregex prest; do
@@ -323,34 +323,34 @@ zaf_ctrl_generate_extitems_cfg() {
 			args="$args \$$apos"
 			apos=$(expr $apos + 1)
 		done <$tmpfile
-	    else
+			else
 		zafparams=""
 		args=""
-	    fi
-	    env="export ITEM_KEY='$ikey'; export PLUGIN='$2'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
-	    lock=$(zaf_ctrl_get_extitem_option $1 $i "Lock")
-	    if [ -n "$lock" ]; then
+			fi
+			env="export ITEM_KEY='$ikey'; export PLUGIN='$2'; export PATH=${ZAF_PLUGINS_DIR}/$2:$ZAF_LIB_DIR:\$PATH; cd ${ZAF_PLUGINS_DIR}/$2; . $ZAF_LIB_DIR/preload.sh; "
+			lock=$(zaf_ctrl_get_extitem_option $1 $i "Lock")
+			if [ -n "$lock" ]; then
 		lock="${ZAF_LIB_DIR}/zaflock $lock "
-	    fi
-	    cache=$(zaf_ctrl_get_extitem_option $1 $i "Cache")
-	    if [ -n "$cache" ]; then
+			fi
+			cache=$(zaf_ctrl_get_extitem_option $1 $i "Cache")
+			if [ -n "$cache" ]; then
 		cache="${ZAF_LIB_DIR}/zafcache '$cache' "
-	    fi
-            cmd=$(zaf_ctrl_get_extitem_option $1 $i "Cmd")
-            if [ -n "$cmd" ]; then
+			fi
+						cmd=$(zaf_ctrl_get_extitem_option $1 $i "Cmd")
+						if [ -n "$cmd" ]; then
 		echo "#!/bin/sh" >${ZAF_SERVER_EXTSCRIPTS}/$ikey
 		chmod +x ${ZAF_SERVER_EXTSCRIPTS}/$ikey
-                (printf "%s" "${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo) >>${ZAF_SERVER_EXTSCRIPTS}/$ikey
-                continue
-            fi
-            cmd=$(zaf_ctrl_get_extitem_option $1 $i "Script")
-            if [ -n "$cmd" ]; then
-                echo "#!/bin/sh" >${ZAF_SERVER_EXTSCRIPTS}/$ikey
+								(printf "%s" "${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo) >>${ZAF_SERVER_EXTSCRIPTS}/$ikey
+								continue
+						fi
+						cmd=$(zaf_ctrl_get_extitem_option $1 $i "Script")
+						if [ -n "$cmd" ]; then
+								echo "#!/bin/sh" >${ZAF_SERVER_EXTSCRIPTS}/$ikey
 		chmod +x ${ZAF_SERVER_EXTSCRIPTS}/$ikey
-                (printf "%s" "${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo) >>${ZAF_SERVER_EXTSCRIPTS}/$ikey
-                continue;
-            fi
-	    zaf_err "External item $i declared in control file but has no Cmd, Function or Script!"
+								(printf "%s" "${env}${zafparams}${preload}${cache}${lock}${cmd}"; echo) >>${ZAF_SERVER_EXTSCRIPTS}/$ikey
+								continue;
+						fi
+			zaf_err "External item $i declared in control file but has no Cmd, Function or Script!"
 	done
 	) || zaf_err "Error during zaf_ctrl_generate_extitems_cfg"
 	rm -f $tmpfile

@@ -10,7 +10,7 @@ zaf_zbxapi_do() {
 	query="$1"
 	zaf_trc "Zabbix API: $query"
 	curl -s -f -L -X POST -H 'Content-Type: application/json-rpc' -d "$query" "$ZAF_ZBXAPI_URL" >$tmpfile
-	if [ $? = 0 ] &&  $ZAF_LIB_DIR/JSON.sh -b <$tmpfile | grep -q '"result"'; then
+	if [ $? = 0 ] &&	$ZAF_LIB_DIR/JSON.sh -b <$tmpfile | grep -q '"result"'; then
 		zaf_trc "API OK"
 		cat $tmpfile
 		rm -f $tmpfile
@@ -52,7 +52,7 @@ zaf_zbxapi_getstring() {
 # Extract value from JSON response result
 # $1 key
 zaf_zbxapi_getvalues() {
-	 $ZAF_LIB_DIR/JSON.sh -b | grep '\["result",.*,"'$1'"]'  | tr '\t' ' ' | cut -d ' ' -f 2- | sed -e 's/^"//' -e 's/"$//'
+	 $ZAF_LIB_DIR/JSON.sh -b | grep '\["result",.*,"'$1'"]'	 | tr '\t' ' ' | cut -d ' ' -f 2- | sed -e 's/^"//' -e 's/"$//'
 }
 
 # Zabbix API related functions
@@ -66,17 +66,17 @@ zaf_zbxapi_login(){
 
  [ -z "$ZAF_ZBXAPI_URL" ] || [ -z "$ZAF_ZBXAPI_USER" ] || [ -z "$ZAF_ZBXAPI_PASS" ] && zaf_err "Zabbix Api parameters not set! Set ZAF_ZBXAPI_URL, ZAF_ZBXAPI_USER and ZAF_ZBXAPI_PASS and try again."
  authstr='{
-   "method" : "user.login",
-   "params" : {
-      "password" : "'$ZAF_ZBXAPI_PASS'",
-      "user" : "'$ZAF_ZBXAPI_USER'"
-   },
-   "id" : 0,
-   "jsonrpc" : "2.0"
+	 "method" : "user.login",
+	 "params" : {
+			"password" : "'$ZAF_ZBXAPI_PASS'",
+			"user" : "'$ZAF_ZBXAPI_USER'"
+	 },
+	 "id" : 0,
+	 "jsonrpc" : "2.0"
  }'
  
  if [ "$ZAF_ZBXAPI_AUTHTYPE" = "http" ] ; then
-    ZAF_ZBXAPI_URL=$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 1)//$ZAF_ZBXAPI_USER:$ZAF_ZBXAPI_PASS@$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 3-)
+		ZAF_ZBXAPI_URL=$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 1)//$ZAF_ZBXAPI_USER:$ZAF_ZBXAPI_PASS@$(echo $ZAF_ZBXAPI_URL | cut -d '/' -f 3-)
  fi
  result=$(zaf_zbxapi_do_cache "$authstr")
  ZAF_ZBXAPI_AUTH=$(echo $result |zaf_zbxapi_getstring)
@@ -122,9 +122,9 @@ zaf_zbxapi_get_object() {
 zaf_zbxapi_gethostgroupid() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "hostgroup" '"name": ["'$1'"]')
- 	[ -z "$result" ] && zaf_err "HostGroup $1 not found!"
- 	echo $result |zaf_zbxapi_getvalues groupid
+	result=$(zaf_zbxapi_get_object "hostgroup" '"name": ["'$1'"]')
+	[ -z "$result" ] && zaf_err "HostGroup $1 not found!"
+	echo $result |zaf_zbxapi_getvalues groupid
 }
 
 # $1 hostid
@@ -132,10 +132,10 @@ zaf_zbxapi_gethostgroupid() {
 zaf_zbxapi_gethost() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "host" '' '"hostids": ["'$1'"]' 'extend')
- 	[ -z "$result" ] && zaf_err "Hostid $1 not found!"
- 	if [ -z "$2" ]; then
- 		echo $result
+	result=$(zaf_zbxapi_get_object "host" '' '"hostids": ["'$1'"]' 'extend')
+	[ -z "$result" ] && zaf_err "Hostid $1 not found!"
+	if [ -z "$2" ]; then
+		echo $result
 	else
 		echo $result |zaf_zbxapi_getvalues $2
 	fi
@@ -145,9 +145,9 @@ zaf_zbxapi_gethost() {
 zaf_zbxapi_gethostid() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "host" '"host": ["'$1'"]')
- 	[ -z "$result" ] && zaf_err "Host $1 not found!"
- 	echo $result |zaf_zbxapi_getvalues hostid
+	result=$(zaf_zbxapi_get_object "host" '"host": ["'$1'"]')
+	[ -z "$result" ] && zaf_err "Host $1 not found!"
+	echo $result |zaf_zbxapi_getvalues hostid
 }
 
 # $1 hostname
@@ -155,10 +155,10 @@ zaf_zbxapi_gethostid() {
 zaf_zbxapi_gethostinventory() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "host" '"host": ["'$1'"]' '"withInventory": "true", "selectInventory": "extend"')
- 	[ -z "$result" ] && zaf_err "Host $1 not found!"
+	result=$(zaf_zbxapi_get_object "host" '"host": ["'$1'"]' '"withInventory": "true", "selectInventory": "extend"')
+	[ -z "$result" ] && zaf_err "Host $1 not found!"
 	if [ -z "$2" ]; then
- 		echo $result 
+		echo $result 
 	else
 		echo $result |zaf_zbxapi_getvalues $2
 	fi
@@ -168,9 +168,9 @@ zaf_zbxapi_gethostinventory() {
 zaf_zbxapi_gettemplateid() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "template" '"host": ["'$1'"]')
- 	[ -z "$result" ] && zaf_err "Template $1 not found!"
- 	echo $result |zaf_zbxapi_getvalues templateid
+	result=$(zaf_zbxapi_get_object "template" '"host": ["'$1'"]')
+	[ -z "$result" ] && zaf_err "Template $1 not found!"
+	echo $result |zaf_zbxapi_getvalues templateid
 }
 
 # $1 templateid
@@ -178,10 +178,10 @@ zaf_zbxapi_gettemplateid() {
 zaf_zbxapi_gettemplate() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "template" '' '"templateids": ["'$1'"]' 'extend')
- 	[ -z "$result" ] && zaf_err "Templateid $1 not found!"
- 	if [ -z "$2" ]; then
- 		echo $result
+	result=$(zaf_zbxapi_get_object "template" '' '"templateids": ["'$1'"]' 'extend')
+	[ -z "$result" ] && zaf_err "Templateid $1 not found!"
+	if [ -z "$2" ]; then
+		echo $result
 	else
 		echo $result |zaf_zbxapi_getvalues $2
 	fi
@@ -191,34 +191,34 @@ zaf_zbxapi_gettemplate() {
 zaf_zbxapi_gethostsingroup() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "host" '' '"groupids": ["'$1'"]')
- 	[ -z "$result" ] && zaf_wrn "No hosts in groupid '$1'"
- 	echo $result | zaf_zbxapi_getvalues "hostid"
+	result=$(zaf_zbxapi_get_object "host" '' '"groupids": ["'$1'"]')
+	[ -z "$result" ] && zaf_wrn "No hosts in groupid '$1'"
+	echo $result | zaf_zbxapi_getvalues "hostid"
 }
 
 # Get all hostids in system
 zaf_zbxapi_gethostids() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "host")
- 	echo $result | zaf_zbxapi_getvalues "hostid"
+	result=$(zaf_zbxapi_get_object "host")
+	echo $result | zaf_zbxapi_getvalues "hostid"
 }
 
 # Get all templateids in system
 zaf_zbxapi_gettemplateids() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "template")
- 	echo $result | zaf_zbxapi_getvalues "templateid"
+	result=$(zaf_zbxapi_get_object "template")
+	echo $result | zaf_zbxapi_getvalues "templateid"
 }
 
 # $1 hostgroupid 
 zaf_zbxapi_gettemplatesingroup() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "template" '' '"groupids": ["'$1'"]')
- 	[ -z "$result" ] && zaf_wrn "No templates in groupid '$1'"
- 	echo $result | zaf_zbxapi_getvalues "templateid"
+	result=$(zaf_zbxapi_get_object "template" '' '"groupids": ["'$1'"]')
+	[ -z "$result" ] && zaf_wrn "No templates in groupid '$1'"
+	echo $result | zaf_zbxapi_getvalues "templateid"
 }
 
 # $1 map or null for all
@@ -226,12 +226,12 @@ zaf_zbxapi_getmapid() {
 	local result
 
 	if [ -n "$1" ]; then
- 		result=$(zaf_zbxapi_get_object "map" '"name": ["'$1'"]')
+		result=$(zaf_zbxapi_get_object "map" '"name": ["'$1'"]')
 	else
- 		result=$(zaf_zbxapi_get_object "map")
+		result=$(zaf_zbxapi_get_object "map")
 	fi
- 	[ -z "$result" ] && zaf_err "Map $1 not found"
- 	echo $result | zaf_zbxapi_getvalues "sysmapid"
+	[ -z "$result" ] && zaf_err "Map $1 not found"
+	echo $result | zaf_zbxapi_getvalues "sysmapid"
 }
 
 # $1 mapid
@@ -239,10 +239,10 @@ zaf_zbxapi_getmapid() {
 zaf_zbxapi_getmap() {
 	local result
 
- 	result=$(zaf_zbxapi_get_object "map" '' '"sysmapids": ["'$1'"]' 'extend')
- 	[ -z "$result" ] && zaf_err "Mapid $1 not found"
- 	if [ -z "$2" ]; then
- 		echo $result
+	result=$(zaf_zbxapi_get_object "map" '' '"sysmapids": ["'$1'"]' 'extend')
+	[ -z "$result" ] && zaf_err "Mapid $1 not found"
+	if [ -z "$2" ]; then
+		echo $result
 	else
 		echo $result |zaf_zbxapi_getvalues $2
 	fi
@@ -261,18 +261,18 @@ zaf_zbxapi_export_object(){
 
  bkpstr='
  {
-    "method": "configuration.export",
-    "jsonrpc": "2.0",
-    "params": {
-        "options": {
-            "'$obj'": [
-                "'$id'"
-            ]
-        },
-        "format": "xml"
-    },
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "id": 1
+		"method": "configuration.export",
+		"jsonrpc": "2.0",
+		"params": {
+				"options": {
+						"'$obj'": [
+								"'$id'"
+						]
+				},
+				"format": "xml"
+		},
+		"auth": "'$ZAF_ZBXAPI_AUTH'",
+		"id": 1
 }'
  zaf_zbxapi_do_cache "$bkpstr" | zaf_zbxapi_getxml
 }
@@ -303,67 +303,67 @@ zaf_zbxapi_import_config(){
  local impstr
 
  if [ -z "$1" ]; then
-   xmlstr=$(zaf_strescape '"')
+	 xmlstr=$(zaf_strescape '"')
  else
-   ! [ -f "$1" ] && return 1
-   xmlstr=$(zaf_strescape '"\n\r' <$1)
+	 ! [ -f "$1" ] && return 1
+	 xmlstr=$(zaf_strescape '"\n\r' <$1)
  fi
  impstr='
  {
-    "method": "configuration.import",
-    "jsonrpc": "2.0",
-    "params": {
-        "format": "xml",
-        "rules": {
-	    "applications": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-            "discoveryRules": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-	    "graphs": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-            "hosts": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-            "items": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-	    "templates": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-            "triggers": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-	    "maps": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-	    "screens": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-            "items": {
-                "createMissing": true,
-                "updateExisting": true
-            },
-	    "valueMaps": {
-                "createMissing": true,
-                "updateExisting": true
-            }
-        },
+		"method": "configuration.import",
+		"jsonrpc": "2.0",
+		"params": {
+				"format": "xml",
+				"rules": {
+			"applications": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+						"discoveryRules": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+			"graphs": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+						"hosts": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+						"items": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+			"templates": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+						"triggers": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+			"maps": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+			"screens": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+						"items": {
+								"createMissing": true,
+								"updateExisting": true
+						},
+			"valueMaps": {
+								"createMissing": true,
+								"updateExisting": true
+						}
+				},
 	"source": "'$xmlstr'"
-    },
-    "auth": "'$ZAF_ZBXAPI_AUTH'",
-    "id": 3
+		},
+		"auth": "'$ZAF_ZBXAPI_AUTH'",
+		"id": 3
 }'
  zaf_zbxapi_do "$impstr" | zaf_zbxapi_getresult | grep -q true
 }
