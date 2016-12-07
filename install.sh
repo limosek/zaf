@@ -9,7 +9,7 @@ if [ -z "$ZAF_RAW_URL" ]; then
 	ZAF_RAW_URL="https://raw.githubusercontent.com/limosek/zaf"
 fi
 
-[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=master
+[ -z "$ZAF_GITBRANCH" ] && ZAF_GITBRANCH=1.3
 
 ############### Functions
 

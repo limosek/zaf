@@ -28,11 +28,11 @@ So zaf is here for you :)
 ## Installing Zaf
 You need to be root and you must have curl installed on your system. Depending on your system, github certificates may not be available so you have to use *-k* option for curl (insecure). Default installation type is silent. So there will be no questions and everything will be autodetected. This simple command should be used on most systems:
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
+curl -k https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | sh
 ```
 If you have only wget installed:
 ```
-wget --no-check-certificate -O - https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh
+wget --no-check-certificate -O - https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | sh
 ```
 If you do not have https support (like openwrt), I made small http mirror of github files which is synchronized each day:
 ```
@@ -42,12 +42,12 @@ wget -O - http://github.macura.cz/zaf/install.sh| ZAF_RAW_URL=http://github.macu
 ### Install options and autoconfiguration
 General parameters for install.sh on any system (simplest way how to install)
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | \
+curl -k https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | \
    sh -s {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Server-Options] [Zaf-Options]
 ```
 or use git version:
 ```
-git clone https://github.com/limosek/zaf.git; cd zaf; git checkout master
+git clone https://github.com/limosek/zaf.git; cd zaf; git checkout 1.3
 
 ./install.sh {auto|interactive|debug-auto|debug-interactive} [Agent-Options] [Server-Options] [Zaf-Options]
  Agent-Options: Z_Option=value [...]
@@ -98,7 +98,7 @@ Now everything was tested on Debian and OpenWrt. If somebody is interrested in, 
 Suppose you want to autoinstall agent on clean system. You need only curl installed. Everything else is one-cmd process.
 This command will install zaf, install zabbix-agent if necessary and sets zabbix variables on agent to reach server. This command can be automatized by puppet or another deploying system.
 ```
-curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s auto \
+curl -k https://raw.githubusercontent.com/limosek/zaf/1.3/install.sh | sh -s auto \
   Z_Server=zabbix.server.local \
   Z_ServerActive=zabbix.server.local \
   Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 \
@@ -110,10 +110,10 @@ You can make your own deb package with preconfigured option. It is up to you to 
 ```
 git clone https://github.com/limosek/zaf.git \
  && cd zaf \
- && git checkout master \
+ && git checkout 1.3 \
  && git clone https://github.com/limosek/zaf-plugins.git \
  && make deb PLUGINS="./zaf-plugins/fsx" ZAF_PLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
-sudo dpkg -i out/zaf-1.3master.deb
+sudo dpkg -i out/zaf-1.3.deb
 ```
 General usage:
 ```
@@ -154,7 +154,7 @@ During plugin installation, zaf will check all dependencies, do install binaries
 Zaf binary can be installed on any system from openwrt to big system. It has minimal dependencies and is shell based. Is has minimal size (up to 50kb of code). It can be used for installing, removing and testing zaf plugin items. Zaf should be run as root.
 ```
 ./zaf 
-./zaf Version 1.3master. Please use some of this commands:
+./zaf Version 1.3. Please use some of this commands:
 ./zaf Cmd [ZAF_OPTION=value] [ZAF_CTRL_Option=value] [ZAF_CTRLI_Item_Option=value] ...
 Plugin manipulation commands:
 ./zaf update                            To update repo (not plugins, similar to apt-get update)                         
