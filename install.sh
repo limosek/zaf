@@ -407,7 +407,7 @@ zaf_postconfigure() {
 
 if ! [ -f README.md ]; then
 	# Hardcoded variables
-	ZAF_VERSION="1.3"
+	ZAF_VERSION="1.4"
 	export ZAF_TMP_DIR="/tmp/zaf-installer"
 	export ZAF_DIR="$ZAF_TMP_DIR/zaf"
 	if [ -n "$ZAF_PROXY" ]; then
