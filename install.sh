@@ -370,7 +370,7 @@ zaf_install_all() {
 	for i in lib/zaf.lib.sh lib/plugin.lib.sh lib/os.lib.sh lib/ctrl.lib.sh lib/cache.lib.sh lib/zbxapi.lib.sh lib/JSON.sh; do
 		zaf_install $i ${ZAF_LIB_DIR}/ 
 	done
-	for i in lib/zaflock lib/zafcache lib/preload.sh; do
+	for i in lib/zaflock lib/zafcache lib/preload.sh lib/zafret; do
 		zaf_install_bin $i ${ZAF_LIB_DIR}/ 
 	done
 	zaf_install_dir ${ZAF_BIN_DIR}

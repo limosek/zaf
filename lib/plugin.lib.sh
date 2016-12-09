@@ -81,8 +81,8 @@ zaf_prepare_plugin() {
 	url=$(zaf_get_plugin_url "$1")/control.zaf || exit $?
 	plugindir="$2"
 	control=${plugindir}/control.zaf
-	if [ "$(zaf_url_info $1)" = "path" ] && cmp -s "$url" "$control"; then
-		zaf_err "prepare_plugin: Cannot install from itself!"
+	if [ "$(zaf_url_info $1)" = "path" ] &&  [ "$url" = "$control" ]; then
+		zaf_err "prepare_plugin: Cannot install from itself ($url,$control)!"
 	fi
 	zaf_install_dir "$plugindir"
 	zaf_dbg "Fetching control file from $url ..."
@@ -256,19 +256,27 @@ zaf_item_info() {
 	local plugin
 	local item
 	local param
+	local tmp
 
 	plugin=$(echo $1 | cut -d '.' -f 1)
 	item=$(echo $1 | cut -d '.' -f 2-)
 	if zaf_is_plugin $plugin; then
 		if zaf_ctrl_get_items <$ZAF_PLUGINS_DIR/$plugin/control.zaf | grep -wq "$item"; then
-			echo "Item $1:"
-			echo -n "Cache: "; zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Cache"; echo
-			echo "Parameters:"
-			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Parameters" ; echo
-			echo "Testparameters:"
-			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Testparameters"; echo
-			echo "Precache:"
-			zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Precache"; echo
+			printf "%b" "Item $1\n\n"
+			tmp=$(zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Cache")
+			[ -n "$tmp" ] && printf "%b" "Cache: $tmp \n\n"
+			tmp=$(zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Parameters")
+			[ -n "$tmp" ] && printf "%b" "Parameters:\n$tmp\n\n"
+			tmp=$(zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Return")
+			[ -n "$tmp" ] && printf "%b" "Return: $tmp\n\n"
+			tmp=$(zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Return-null")
+			[ -n "$tmp" ] && printf "%b" "Return-null: $tmp\n\n"
+			tmp=$(zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Return-empty")
+			[ -n "$tmp" ] && printf "%b" "Return-empty: $tmp\n\n"
+			tmp=$(zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Testparameters")
+			[ -n "$tmp" ] && printf "%b" "Testparameters: $tmp\n\n"
+			tmp=$(zaf_ctrl_get_item_option $ZAF_PLUGINS_DIR/$plugin/control.zaf "$item" "Precache")
+			[ -n "$tmp" ] && printf "%b" "Precache: $tmp\n\n"
 			grep "UserParameter=$1" $ZAF_AGENT_CONFIGD/zaf_${plugin}.conf
 		else
 			zaf_err "No such item $item."

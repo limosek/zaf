@@ -146,6 +146,11 @@ zaf_far(){
 	 eval $sedcmd
 }
 
+# Trim spaces and newlines from string
+zaf_trim(){
+	tr -d '\n'
+}
+
 # Limit concurrent processes or continue
 zaf_bglimit(){
 		local maxbg
@@ -255,7 +260,7 @@ zaf_toupper() {
 
 # Return simplified key with discarded special chars.
 zaf_stripctrl() {
-	echo $1 | tr '[]*&;:.-' '________'
+	echo $1 | tr '[]*&;:.-' '________' | tr -d '\n'
 }
 
 # Unescape string on stdin
@@ -279,7 +284,7 @@ zaf_date_add() {
 # Create temp file and return its name
 # $1 prefix or empty
 zaf_tmpfile() {
-	echo "$ZAF_TMP_DIR/tmp$1"
+	echo "$ZAF_TMP_DIR/tmp$1$(zaf_random)"
 }
 
 # return random number

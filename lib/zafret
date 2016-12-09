@@ -1,0 +1,52 @@
+#!/bin/sh
+
+. $(dirname $0)/preload.sh
+
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+	zaf_err "zafret valuefile stderrfile retcode [return return_if_null return_if_error]"
+	exit 1
+fi
+
+value="$(cat $1)"
+rm -f $1
+shift
+
+stderr="$(cat $1)"
+rm -f $1
+shift
+
+retcode="$1"
+shift
+
+if [ -n "$1" ]; then
+	ret="$1"
+	shift
+fi
+
+if [ -n "$1" ]; then
+	retnull="$1"
+	shift
+fi
+
+if [ -n "$1" ]; then
+	reterr="$1"
+	shift
+fi
+
+if [ "$retcode" != 0 ]; then
+	echo "$reterr"
+	zaf_wrn "${ITEM_KEY}("$*"): Error code '$retcode', returning '$reterr' ($stderr)"
+	exit $retcode
+fi
+
+if [ -z "$value" ]; then
+	echo "$retnull"
+	zaf_wrn "${ITEM_KEY}("$*"): Got empty result, returning '$retnull' ($stderr)"
+	exit
+fi
+
+echo $value
+if [ -n "$stderr" ]; then
+	zaf_wrn "${ITEM_KEY}("$*"): $stderr"
+fi
+
