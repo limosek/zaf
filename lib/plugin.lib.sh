@@ -81,7 +81,7 @@ zaf_prepare_plugin() {
 	url=$(zaf_get_plugin_url "$1")/control.zaf || exit $?
 	plugindir="$2"
 	control=${plugindir}/control.zaf
-	if [ "$(zaf_url_info $1)" = "path" ] && cmp -s "$url" "$control"; then
+	if [ "$(zaf_url_info $1)" = "path" ] && [ "$url" = "$control" ]; then
 		zaf_err "prepare_plugin: Cannot install from itself!"
 	fi
 	zaf_install_dir "$plugindir"

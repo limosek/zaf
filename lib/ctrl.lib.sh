@@ -216,8 +216,8 @@ zaf_ctrl_install() {
 	done
 	files=$(zaf_ctrl_get_global_option $2 "Install-files")
 	for f in $files; do
-		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
-                zaf_install "${ZAF_TMP_DIR}/$b" "$pdir"
+		zaf_fetch_url "$1/$f" >"${ZAF_TMP_DIR}/$f"
+                zaf_install "${ZAF_TMP_DIR}/$f" "$pdir"
 	done
 	true
 	) || zaf_err "Error during zaf_ctrl_install"
@@ -245,6 +245,7 @@ zaf_ctrl_generate_items_cfg() {
 	(set -e
 	for i in $items; do
             iscript=$(zaf_stripctrl $i)
+	    zafparams=""
 	    zaf_ctrl_get_item_option $1 $i "Parameters" >$tmpfile
 	    if [ -s "$tmpfile" ]; then
 		ikey="$2.$i[*]"
