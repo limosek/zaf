@@ -267,7 +267,7 @@ zaf_configure(){
 	zaf_get_option ZAF_PLUGINS_DIR "Plugins directory" "${ZAF_LIB_DIR}/plugins" "$INSTALL_MODE"
 	[ "${ZAF_GIT}" = 1 ] && zaf_get_option ZAF_REPO_GITURL "Git plugins repository" "https://github.com/limosek/zaf-plugins.git" "$INSTALL_MODE"
 	zaf_get_option ZAF_PROXY "http proxy used by zaf" "" "$INSTALL_MODE"
-	zaf_get_option ZAF_REPO_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/master/" "$INSTALL_MODE"
+	zaf_get_option ZAF_REPO_URL "Plugins http[s] repository" "https://raw.githubusercontent.com/limosek/zaf-plugins/${ZAF_VERSION}/" "$INSTALL_MODE"
 	zaf_get_option ZAF_REPO_DIR "Plugins directory" "${ZAF_LIB_DIR}/repo" "$INSTALL_MODE"
 
 	zaf_get_option ZAF_AGENT_CONFIG "Zabbix agent config" "/etc/zabbix/zabbix_agentd.conf" "$INSTALL_MODE"

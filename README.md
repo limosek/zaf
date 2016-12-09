@@ -36,7 +36,7 @@ wget --no-check-certificate -O - https://raw.githubusercontent.com/limosek/zaf/1
 ```
 If you do not have https support (like openwrt), I made small http mirror of github files which is synchronized each day:
 ```
-wget -O - http://github.macura.cz/zaf/1.3/install.sh| ZAF_URL=http://github.macura.cz/zaf/ ZAF_REPO_URL=http://github.macura.cz/zaf-plugins/ sh
+wget -O - http://github.macura.cz/zaf/1.3/install.sh| ZAF_URL=http://github.macura.cz/zaf/ ZAF_REPO_URL=http://github.macura.cz/zaf-plugins/1.3/ sh
 ```
 
 ### Install options and autoconfiguration
@@ -74,7 +74,7 @@ ZAF_CACHE_DIR|Cache directory|/tmp/zafc
 ZAF_LIB_DIR|Libraries directory|/usr/lib/zaf
 ZAF_PLUGINS_DIR|Plugins directory|${ZAF_LIB_DIR}/plugins
 ZAF_PROXY|http[s] and ftp proxy used by zaf|empty	
-ZAF_REPO_URL|Plugins http[s] repository|https://raw.githubusercontent.com/limosek/zaf-plugins/master/
+ZAF_REPO_URL|Plugins http[s] repository|https://raw.githubusercontent.com/limosek/zaf-plugins/1.3/
 ZAF_REPO_DIR|Plugins directory|${ZAF_LIB_DIR}/repo
 ZAF_AGENT_CONFIG|Zabbix agent config|/etc/zabbix/zabbix_agentd.conf
 ZAF_AGENT_CONFIGD|Zabbix agent config.d|/etc/zabbix/zabbix_agentd.conf.d/
