@@ -78,8 +78,8 @@ zaf_agentparm(){
 			echo "$value" | grep -qE "$regexp" ||	 zaf_err "$ITEM_KEY: Bad parameter '$name' value '$value' (not in regexp '$regexp')."
 		fi
 	fi
-	eval $name=$value
 	zaf_trc "$ITEM_KEY: Param $name set to $value"
+	eval $name=\"$value\"
 }
 
 # Fetch url to stdout 

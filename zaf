@@ -235,7 +235,7 @@ reinstall)
 	done
 	[ -n "$reinstalled" ] && zaf_is_root && zaf_restart_agent
 	;;
-remove)
+remove|uninstall)
 	shift
 	[ -z "$1" ] && echo "$0 remove plugin [plugin]..."
 	for p in $@; do
@@ -245,6 +245,21 @@ remove)
 		fi
 	done
 	[ -n "$removed" ] && zaf_is_root && zaf_restart_agent
+	;;
+plugin-set)
+	plugin="$2"
+	param="$3"
+	value="$4"
+	if [ -z "$plugin" ] || [ -z "$param" ]; then
+		zaf_err "$0 plugin-set plugin parameter value"
+	else
+		if zaf_is_plugin "$plugin"; then
+			plugindir="${ZAF_PLUGINS_DIR}/${plugin}"
+			zaf_set_plugin_parameter "$plugindir" "$param" "$value"
+		else
+			zaf_err "Plugin $plugin is not installed."
+		fi
+	fi 
 	;;
 
 ###### Zaf related commands

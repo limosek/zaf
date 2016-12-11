@@ -40,14 +40,15 @@ zaf_plugin_info() {
 	local items
 
 	! [ -f "$control" ] && zaf_err "Control file $control not found."
-	plugin=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Plugin)
-	pdescription=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_moption Description)
-	pmaintainer=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Maintainer)
-	pversion=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Version)
-	purl=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Url)
-	phome=$(zaf_ctrl_get_global_block <"${control}" | zaf_block_get_option Home)
+	plugin=$(zaf_ctrl_get_global_option "${control}" Plugin)
+	pdescription=$(zaf_ctrl_get_global_option "${control}" Description)
+	pmaintainer=$(zaf_ctrl_get_global_option "${control}" Maintainer)
+	pversion=$(zaf_ctrl_get_global_option "${control}" Version)
+	purl=$(zaf_ctrl_get_global_option "${control}" Url)
+	phome=$(zaf_ctrl_get_global_option "${control}" Home)
 	pitems=$(zaf_ctrl_get_items <"${control}")
 	peitems=$(zaf_ctrl_get_extitems <"${control}")
+	params=$(zaf_ctrl_get_global_option "${control}" Parameters)
 	echo
 	echo -n "Plugin '$plugin' "; [ -n "$pversion" ] && echo -n "version ${pversion}"; echo ":"
 	echo "$pdescription"; echo
@@ -57,16 +58,39 @@ zaf_plugin_info() {
 	echo 
 	if zaf_is_plugin "$(basename $plugin)"; then
 		items=$(zaf_list_plugin_items $plugin)
+		if [ -n "$params" ]; then
+			printf "%b" "Plugin parameters: (name,default,actual value)\n"
+			zaf_ctrl_get_global_option "${control}" Parameters | while read param default ; do
+				printf "%b" "$param\t$default\t$(zaf_get_plugin_parameter $(dirname $1) $param)\n"
+			done
+			echo;
+		fi 
 		[ -n "$items" ] && { echo -n "Defined items: "; echo $items; }
 		items=$(zaf_list_plugin_items $plugin test)
 		[ -n "$items" ] && { echo -n "Test items: "; echo $items; }
 		items=$(zaf_list_plugin_items $plugin precache)
 		[ -n "$items" ] && { echo -n "Precache items: "; echo $items; }
 		[ -n "$peitems" ] && { echo -n "External check items: "; echo $peitems; }
+		
 	else
 		echo "Items: $pitems"
 	fi
 	echo
+}
+
+# Set plugin global parameter
+# $1 plugindir
+# $2 parameter
+# $3 value
+zaf_set_plugin_parameter() {
+	printf "%s" "$3" >"${INSTALL_PREFIX}/${1}/${2}.value"
+}
+
+# Get plugin global parameter
+# $1 plugindir
+# $2 parameter
+zaf_get_plugin_parameter() {
+	[ -f "${1}/${2}.value" ] && cat "${1}/${2}.value"
 }
 
 # Prepare plugin into dir 
@@ -104,6 +128,9 @@ zaf_install_plugin() {
 	local tmpplugindir
 	local control
 	local version
+	local eparam
+	local param
+	local default
 
 	plugin=$(basename "$1")
 	plugindir="${ZAF_PLUGINS_DIR}/${plugin}"
@@ -125,6 +152,24 @@ zaf_install_plugin() {
 			zaf_touch "${plugindir}/postinst.need"
 		fi
 		zaf_ctrl_install "$url" "${control}" "${plugindir}"
+		rm "${plugindir}/params"
+		zaf_touch "${plugindir}/params"
+		(zaf_ctrl_get_global_option "${control}" "Parameters"; echo) | \
+			while read param default; do
+				[ -z "$param" ] && continue
+				echo $param >>"${plugindir}/params"
+				eval eparam=\$ZAF_${plugin}_${param}
+				if [ -z "$eparam" ] && ! zaf_get_plugin_parameter "$plugindir" "$param" >/dev/null; then
+					zaf_wrn "Do not forget to set parameter $param. Use zaf plugin-set $plugin $param value. Default is $default."
+					zaf_set_plugin_parameter "$plugindir" "$param" "$default"
+				else
+					if [ -n "$eparam" ]; then
+						zaf_dbg "Setting $param to $eparam from env."
+						zaf_set_plugin_parameter "$plugindir" "$param" "$eparam"
+					fi
+				fi
+			done
+
 	else
 		zaf_err "Cannot install plugin '$plugin' to $plugindir!"
 	fi

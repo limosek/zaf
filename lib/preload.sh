@@ -9,6 +9,14 @@
 . ${ZAF_LIB_DIR}/zbxapi.lib.sh
 . ${ZAF_LIB_DIR}/cache.lib.sh
 
+# Global plugin parameters
+[ -f ./params ] && for p in $(cat ./params); do
+	var=$p
+	value="$(cat ${p}.value)"
+	zaf_trc "Global $p parameter $var=$value"
+	eval export $var="$value"	
+done
+
 # Plugin specific functions if exists
 [ -f ./functions.sh ] && . ./functions.sh
 
@@ -30,8 +38,12 @@ export PATH
 
 if [ "$(basename $0)" = "preload.sh" ] && [ -n "$*" ]; then
 	tmpf=$(zaf_tmpfile preload)
+	export tmpf
 	$@ 2>$tmpf
 	[ -s $tmpf ] && zaf_wrn <$tmpf
+else
+	tmpf=$(zaf_tmpfile preload)
+	export tmpf	
 fi
 
 
