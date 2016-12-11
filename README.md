@@ -220,6 +220,18 @@ zaf install /some/plugin
 ```
 Installer will look into control file, run setup task defined there, fetch binaries and scripts needed for specific plugin and test system dependencies for that plugin. If everything is OK, zaf_plugin.conf is created in zabbix_agentd.d conf directory and userparameters are automaticaly added.
 
+### Plugin parameters
+Plugin can have some global parameters. For example url of local server to check. See booked plugin. In that case, you have to specify parameters before use.
+To set parameters by environment:
+```
+zaf install booked ZAF_booked_url=http://booked.server/api ZAF_booked_username=user
+```
+To set parameters later:
+```
+zaf plugin-set booked url http://booked.server/api
+zaf plugin-set booked username user
+```
+
 ## How it works
 Zaf installer will do most of actions needed to monitor some specific plugin items. Configuration of plugin is very simple and text readable. Anybody can write its own plugin or make its plugin "zafable". It is enough to create *control.zaf" file. For example, look into https://github.com/limosek/zaf-plugins repository. This is default repository for zaf. 
 
