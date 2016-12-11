@@ -175,6 +175,18 @@ test)
 		done
 	done
 	;;
+itemsh)	
+	shift
+	if zaf_is_item "$1"; then
+		plugin=$(echo $1|cut -d '.' -f 1)
+		item=$(echo $1|cut -d '.' -f 2)
+		script=$(zaf_ctrl_generate_items_cfg "${ZAF_PLUGINS_DIR}/${plugin}/control.zaf" "${plugin}" "" "sh -i #"| grep "UserParameter=$1" | cut -d ',' -f 2-)
+		eval $script
+		exit
+	else
+		zaf_err "No such plugin/item $1"
+	fi
+	;;
 get)
 	shift
 	if echo $1|grep -q '\.'; then
@@ -463,6 +475,7 @@ api)
 	zaf_hlp "$0 test [plugin[.item]]" "To test [all] suported items by zabbix_agentd [for plugin]"
 	zaf_hlp "$0 get [plugin[.item]]" "To test [all] suported items by zabbix_get [for plugin]"
 	zaf_hlp "$0 precache [plugin[.item]]" "To precache [all] suported items"
+	zaf_hlp "$0 itemsh plugin.item" "To spawn interactive shell in item context (same as UserParameter)."
 	echo
 	echo "Zabbix API commands:"
 	zaf_hlp "$0 api" "To zabbix API functions. See $0 api for more info."

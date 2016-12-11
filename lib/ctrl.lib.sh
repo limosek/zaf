@@ -226,6 +226,8 @@ zaf_ctrl_install() {
 # Generates zabbix items cfg from control file
 # $1 control
 # $2 pluginname
+# $3 if set, no script will be created
+# $4 if set, cmd is set always to $4
 zaf_ctrl_generate_items_cfg() {
 	local items
 	local cmd
@@ -281,8 +283,11 @@ zaf_ctrl_generate_items_cfg() {
 		else
 			retscr="";
 		fi
-		cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
-		
+		if [ -z "$4" ]; then
+			cmd=$(zaf_ctrl_get_item_option $1 $i "Cmd")
+		else
+			cmd="$4"
+		fi
 		if [ -n "$cmd" ]; then
 			printf "%s" "UserParameter=$ikey,${env}${zafparams}${preload}${cache}${lock}${cmd}${retscr}"; echo
 			continue
@@ -294,7 +299,12 @@ zaf_ctrl_generate_items_cfg() {
 			zaf_ctrl_get_item_option $1 $i "Script"
 			) >${ZAF_TMP_DIR}/${iscript}.sh;
 			[ -z "$3" ] && zaf_install_bin ${ZAF_TMP_DIR}/${iscript}.sh ${ZAF_PLUGINS_DIR}/$2/
-			printf "%s" "UserParameter=$ikey,${env}${preload}${zafparams}${cache}${lock}${ZAF_PLUGINS_DIR}/$2/${iscript}.sh ${args}"; echo
+			if [ -z "$4" ]; then
+				script="${ZAF_PLUGINS_DIR}/$2/${iscript}.sh"
+			else
+				script="$4"
+			fi
+			printf "%s" "UserParameter=$ikey,${env}${preload}${zafparams}${cache}${lock}$script ${args}"; echo
 			rm -f ${ZAF_TMP_DIR}/${iscript}.sh
 			continue;
 		fi

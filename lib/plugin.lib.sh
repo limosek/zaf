@@ -212,6 +212,17 @@ zaf_is_plugin() {
 	false
 }
 
+zaf_is_item() {
+	local plugin
+	local item
+
+	plugin=$(echo $1|cut -d '.' -f 1)
+	item=$(echo $1|cut -d '.' -f 2)
+	[ -z "$plugin" ] || [ -z "$item" ] && return 1
+	zaf_is_plugin "$plugin" && zaf_list_plugin_items "$plugin" | grep -qE "\.(${item}\$|${item}\[)"
+}
+
+
 zaf_discovery_plugins() {
 	zaf_list_plugins | zaf_discovery '{#PLUGIN}'
 }

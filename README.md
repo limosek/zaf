@@ -231,6 +231,11 @@ To set parameters later:
 zaf plugin-set booked url http://booked.server/api
 zaf plugin-set booked username user
 ```
+Plugin parameters are available as environment variables in shell script/binary run by agent. You can simulate this environment by
+```
+zaf itemsh booked.num_reservations
+```
+Interactive shell will be spawn and you can test your commands or scripts in same way how zabbix agent would do it. Use exit command or ctrl-D to get back.
 
 ## How it works
 Zaf installer will do most of actions needed to monitor some specific plugin items. Configuration of plugin is very simple and text readable. Anybody can write its own plugin or make its plugin "zafable". It is enough to create *control.zaf" file. For example, look into https://github.com/limosek/zaf-plugins repository. This is default repository for zaf. 
