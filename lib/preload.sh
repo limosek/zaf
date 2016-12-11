@@ -9,6 +9,15 @@
 . ${ZAF_LIB_DIR}/zbxapi.lib.sh
 . ${ZAF_LIB_DIR}/cache.lib.sh
 
+if ! type zaf_version >/dev/null; then
+	echo "Problem loading libraries?"
+	exit 2
+fi
+
+zaf_debug_init
+zaf_tmp_init
+zaf_cache_init
+
 # Global plugin parameters
 [ -f ./params ] && for p in $(cat ./params); do
 	var=$p
@@ -17,17 +26,6 @@
 	eval export $var="$value"	
 done
 
-# Plugin specific functions if exists
-[ -f ./functions.sh ] && . ./functions.sh
-
-if ! type zaf_version >/dev/null; then
-	echo "Problem loading libraries?"
-	exit 2
-fi
-zaf_debug_init
-zaf_tmp_init
-zaf_cache_init
-
 export ZAF_LIB_DIR
 export ZAF_TMP_DIR
 export ZAF_CACHE_DIR
@@ -35,6 +33,9 @@ export ZAF_PLUGINS_DIR
 export ZAF_DEBUG
 unset ZAF_LOG_STDERR
 export PATH
+
+# Plugin specific functions if exists
+[ -f ./functions.sh ] && . ./functions.sh
 
 if [ "$(basename $0)" = "preload.sh" ] && [ -n "$*" ]; then
 	tmpf=$(zaf_tmpfile preload)
