@@ -78,6 +78,12 @@ zaf_plugin_info() {
 	echo
 }
 
+# Get global plugin parameters
+# $1 plugin
+zaf_get_plugin_parameters() {
+	zaf_ctrl_get_global_option "${ZAF_PLUGINS_DIR}/${p}/control.zaf" "Parameters" | while read param rest; do echo $param; done
+}
+
 # Set plugin global parameter
 # $1 plugindir
 # $2 parameter
