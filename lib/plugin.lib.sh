@@ -152,7 +152,7 @@ zaf_install_plugin() {
 			zaf_touch "${plugindir}/postinst.need"
 		fi
 		zaf_ctrl_install "$url" "${control}" "${plugindir}"
-		rm "${plugindir}/params"
+		rm -f "${plugindir}/params"
 		zaf_touch "${plugindir}/params"
 		(zaf_ctrl_get_global_option "${control}" "Parameters"; echo) | \
 			while read param default; do

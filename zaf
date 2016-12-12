@@ -239,6 +239,9 @@ reinstall)
 	[ -z "$1" ] && echo "$0 reinstall plugin [plugin]..."
 	for p in $@; do
 		if zaf_is_plugin "$p"; then
+			(zaf_ctrl_get_global_option "${ZAF_PLUGINS_DIR}/${p}" "Parameters"; echo) | while read param; do
+				eval export ZAF_${p}_${param}=$(zaf_get_plugin_parameter "${ZAF_PLUGINS_DIR}/${p}" $param)
+			done
 			zaf_remove_plugin "$(basename $p)"
 			reinstalled=1
 		fi
