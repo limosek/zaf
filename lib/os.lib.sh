@@ -140,15 +140,6 @@ zaf_uninstall(){
 		fi
 }
 
-# Automaticaly install agent on debian
-# For another os, create similar function (install_zabbix_centos)
-zaf_install_agent_debian() {
-		zaf_fetch_url "http://repo.zabbix.com/zabbix/3.0/debian/pool/main/z/zabbix-release/zabbix-release_3.0-1+${ZAF_OS_CODENAME}_all.deb" >"/tmp/zaf-installer/zabbix-release_3.0-1+${ZAF_OS_CODENAME}_all.deb" \
-	&& dpkg -i "/tmp/zaf-installer/zabbix-release_3.0-1+${ZAF_OS_CODENAME}_all.deb" \
-	&& apt-get update \
-	&& apt-get install -y -q $ZAF_AGENT_PKG
-}
-
 zaf_install_agent_opkg() {
 		opkg update && \
 		opkg install $ZAF_AGENT_PKG
