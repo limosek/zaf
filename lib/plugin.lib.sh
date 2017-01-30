@@ -223,7 +223,7 @@ zaf_is_item() {
 	local item
 
 	plugin=$(echo $1|cut -d '.' -f 1)
-	item=$(echo $1|cut -d '.' -f 2)
+	item=$(echo $1|cut -d '.' -f 2- | cut -d '[' -f 1)
 	[ -z "$plugin" ] || [ -z "$item" ] && return 1
 	zaf_is_plugin "$plugin" && zaf_list_plugin_items "$plugin" | grep -qE "\.(${item}\$|${item}\[)"
 }
@@ -314,6 +314,48 @@ zaf_list_plugin_items() {
 	echo
 }
 
+zaf_list_plugin_commands() {
+	local plugindir
+	local commands
+
+	if ! zaf_is_plugin "$1"; then
+		zaf_err "Missing plugin name or plugin $1 unknown. ";
+	fi
+	plugindir="${ZAF_PLUGINS_DIR}/$1"
+	commands=$(zaf_ctrl_get_global_option "${plugindir}/control.zaf" Install-cmd)
+	if [ -n "$commands" ]; then
+		echo $commands;
+	else
+		zaf_wrn "Plugin $1 has no commands."
+	fi
+}
+
+# $1 plugin 
+# $2 cmd
+# $3...$9 arguments
+zaf_plugin_run_command() {
+	local plugin
+	local cmd
+	local args
+
+	plugin=$1
+	cmd=$2
+	args="$3 $4 $5 $6 $7 $8 $9"
+	if ! zaf_is_plugin "$plugin"; then
+		zaf_err "Missing plugin name or plugin $olugin unknown. ";
+	fi
+	plugindir="${ZAF_PLUGINS_DIR}/$plugin"
+	commands=$(zaf_ctrl_get_global_option "${plugindir}/control.zaf" Install-cmd)
+	if echo $commands |grep -q $cmd; then
+		export PATH=$plugindir:$PATH
+		cd $plugindir
+		[ -f functions.sh ] && source functions.sh
+		exec $cmd $args;
+	else
+		zaf_err "Plugin $1 has no command $cmd"
+	fi
+}
+
 zaf_item_info() {
 	local plugin
 	local item
@@ -373,6 +415,15 @@ zaf_test_item() {
 		$ZAF_AGENT_BIN -t "$1" | tr '\n' ' '
 		echo
 	fi
+}
+
+zaf_run_item() {
+	local item
+	item=$(echo $1| cut -d '[' -f 1)
+	params=$(echo $1| cut -d '[' -f 2- | tr ',' ' '| tr -d ']')
+	cmd=$(grep "^UserParameter=$item" $ZAF_AGENT_CONFIGD/zaf*.conf	| cut -d ',' -f 2-)
+	echo $cmd >/tmp/a 
+	sh /tmp/a $params
 }
 
 zaf_precache_item() {

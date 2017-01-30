@@ -111,7 +111,7 @@ zaf_set_zabbix_option() {
 	local option="$2"
 	local value="$3"
 	if grep -q ^$option\= $cfgfile; then
-		zaf_dbg "Setting option $option in $cfgfile to $3."
+		zaf_dbg "Setting Zabbix agent option $option in $cfgfile to $3."
 		sed -i "s/$option=\(.*\)/$option=$value/" $cfgfile
 	else
 		 zaf_move_zabbix_option "$1" "$2" "$3"
@@ -179,11 +179,23 @@ zaf_configure_agent() {
 	local value
 	local options
 	local changes
+	local aparams
 
 	zaf_install_dir "$ZAF_AGENT_CONFIGD"
 	echo -n >"$ZAF_AGENT_CONFIGD/zaf_options.conf" || zaf_err "Cannot access $ZAF_AGENT_CONFIGD/zaf_options.conf"
 	! [ -f "$ZAF_AGENT_CONFIG" ] && zaf_install "$ZAF_AGENT_CONFIG"
-	for pair in "$@"; do
+	if [ -n "$ZAF_ZBXSRV_HOST" ]; then
+		aparms="Z_Server=$ZAF_ZBXSRV_HOST,localhost Z_ServerActive=$ZAF_ZBXSRV_HOST"
+	else
+		aparms=""
+	fi
+	if [ -n "$ZAF_HOSTNAME" ]; then
+		aparms="$aparms Z_Hostname=$ZAF_HOSTNAME"
+	else
+		aparms="$aparms Z_HostnameItem=system.hostname Z_Hostname="
+		zaf_dbg "Using hostname as Hostname item for Zabbix"
+	fi
+	for pair in $aparms "$@"; do
 		echo $pair | grep -q '^Z\_' || continue # Skip non Z_ vars
 		option=$(echo $pair|cut -d '=' -f 1|cut -d '_' -f 2)
 		value=$(echo $pair|cut -d '=' -f 2-)
@@ -192,7 +204,7 @@ zaf_configure_agent() {
 		else
 			zaf_unset_zabbix_option "$ZAF_AGENT_CONFIG" "$option"
 		fi
-		options="$options Z_$option=$value"
+		echo $options |grep -vq "Z_$option=" && options="$options Z_$option=$value"
 		changes=1
 	done
 	zaf_set_option ZAF_AGENT_OPTIONS "${options}"
@@ -275,11 +287,14 @@ zaf_configure(){
 	zaf_get_option ZAF_AGENT_CONFIGD "Zabbix agent config.d" "/etc/zabbix/zabbix_agentd.conf.d/" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_BIN "Zabbix agent binary" "/usr/sbin/zabbix_agentd" "$INSTALL_MODE"
 	zaf_get_option ZAF_AGENT_RESTART "Zabbix agent restart cmd" "service zabbix-agent restart" "$INSTALL_MODE"
+	zaf_get_option ZAF_ZBXSRV_HOST "Zabbix server hostname" "zabbix" "$INSTALL_MODE"
+	zaf_get_option ZAF_ZBXSRV_PORT "Zabbix server port" "10051" "$INSTALL_MODE"
 
 	zaf_get_option ZAF_SERVER_CONFIG "Zabbix server config" "/etc/zabbix/zabbix_server.conf" "$INSTALL_MODE"
 	[ -z "${ZAF_SERVER_CONFIGD}" ] && ! [ -d "${ZAF_SERVER_CONFIGD}" ] && [ -d "/etc/zabbix/zabbix_server.d" ] && ZAF_SERVER_CONFIGD="/etc/zabbix/zabbix_server.d"
 	zaf_get_option ZAF_SERVER_CONFIGD "Zabbix server config.d" "/etc/zabbix/zabbix_server.conf.d/" "$INSTALL_MODE"
 	zaf_get_option ZAF_SERVER_BIN "Zabbix server binary" "/usr/sbin/zabbix_server" "$INSTALL_MODE"
+	zaf_get_option ZAF_HOSTNAME "Hostname of this machine" "" "$INSTALL_MODE"
 	
 	zaf_get_option ZAF_SUDOERSD "Sudo sudoers.d directory" "/etc/sudoers.d" "$INSTALL_MODE"
 	zaf_get_option ZAF_CROND "Cron.d directory" "/etc/cron.d" "$INSTALL_MODE"
@@ -320,6 +335,9 @@ zaf_configure(){
 	zaf_set_option ZAF_FILES_GID "$ZAF_FILES_GID"
 	zaf_set_option ZAF_FILES_UMASK "$ZAF_FILES_UMASK"
 	zaf_set_option ZAF_AGENT_RESTART "$ZAF_AGENT_RESTART"
+	zaf_set_option ZAF_ZBXSRV_HOST "$ZAF_ZBXSRV_HOST"
+	zaf_set_option ZAF_ZBXSRV_PORT "$ZAF_ZBXSRV_PORT"
+	zaf_set_option ZAF_HOSTNAME "$ZAF_HOSTNAME"
 	if [ -x "$ZAF_SERVER_BIN" ]; then
 		zaf_set_option ZAF_SERVER_CONFIG "$ZAF_SERVER_CONFIG"
 		zaf_set_option ZAF_SERVER_CONFIGD "$ZAF_SERVER_CONFIGD"

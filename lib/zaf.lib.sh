@@ -301,3 +301,56 @@ zaf_sudo() {
 	fi
 }
 
+# Get item name from plugin.item[parms]
+zaf_get_plugin_name() {
+	echo $1|cut -d '.' -f 1
+}
+
+# Get item name from plugin.item[parms]
+zaf_get_item_name() {
+	echo $1|cut -d '.' -f 2-|cut -d '[' -f 1
+}
+
+# Get item params from plugin.item[parms]
+zaf_get_item_params() {
+	echo $1|cut -d '[' -f 2|cut -d ']' -f 1
+}
+
+# Convert Zabbix style parameters [param1,param2,..] into $1 $2 $3
+zaf_paramstosh() {
+	local parms
+	local IFS
+	parms=$(echo $*|cut -d '[' -f 2 | cut -d ']' -f 1| tr ',' ':')
+	IFS=:; for i in $parms; do
+		if [ -n "$i" ]; then
+			printf "$i "
+		else
+			printf "'' "
+		fi
+	done
+}
+
+#Returns either actual hostname or configured one
+zaf_hostname() {
+	if [ -z "$ZAF_HOSTNAME" ]; then
+		hostname
+	else
+		echo $ZAF_HOSTNAME
+	fi
+}
+
+# Send active agent query (used for auto registration of host)
+# $1 hostname
+# $2 metadata
+zaf_register() {
+	local query
+	local result
+	zaf_dbg "zaf_register $1 $2"
+	query="{\"host\": \"$1\", \"host_metadata\": \"$2\", \"request\": \"active checks\"}"
+	result="$(echo $query| nc -q1 $ZAF_ZBXSRV_HOST $ZAF_ZBXSRV_PORT | tail -c +14)"
+	if echo $result |grep -q failed; then
+		zaf_wrn $result
+	fi
+}
+
+

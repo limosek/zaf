@@ -195,7 +195,7 @@ zaf_ctrl_cron() {
 	zaf_ctrl_get_global_option $2 "Cron" | zaf_far '{PLUGINDIR}' "${plugindir}" >$ZAF_CROND/zaf_$plugin || zaf_err "Error during zaf_ctrl_cron"
 }
 
-# Install files defined to be installed in control to plugun directory
+# Install files defined to be installed in control to plugin directory
 # $1 pluginurl
 # $2 control
 # $3 plugindir
@@ -209,7 +209,7 @@ zaf_ctrl_install() {
 
 	pdir="$3"
 	(set -e
-	binaries=$(zaf_ctrl_get_global_option $2 "Install-bin")
+	binaries=$(zaf_ctrl_get_global_option $2 "Install-bin")" "$(zaf_ctrl_get_global_option $2 "Install-cmd")
 	for b in $binaries; do
 		zaf_fetch_url "$1/$b" >"${ZAF_TMP_DIR}/$b"
 		zaf_install_bin "${ZAF_TMP_DIR}/$b" "$pdir"
