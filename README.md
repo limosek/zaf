@@ -24,6 +24,21 @@ So zaf is here for you :)
 * Zabbix agent autoinstallation and autoconfiguration suitable to use in puppet or another tool 
 * OS packaging support
 * Zabbix API support
+* Zabbix host autoregistration automation
+* Zabbix sender and agent glue (send results of agent checks to zabbix sender)
+
+
+## How it works
+Zaf installer will do most of actions needed to monitor some specific plugin items. Configuration of plugin is very simple and text readable. Anybody can write its own plugin or make its plugin "zafable". It is enough to create *control.zaf" file. For example, look into https://github.com/limosek/zaf-plugins repository. This is default repository for zaf. 
+
+## I want to make my own plugin!
+Great! Look into https://github.com/limosek/zaf-plugins repository, look to control files and try to create your own. It is easy! You can contact me for help.
+
+## I want to help with zaf!
+Great! I have no time for testing on systems and writing system specific hacks. Next to this, templates should be optimized and tested for basic plugins. 
+
+## I love this tool
+OK, great, if you love this tool, you can support new development on paypal account *lukas@macura.cz* or Bitcoin address **19Wbr729vei35gUQLcH2ZJGKb8oTVLz44K**. 
 
 ## Installing Zaf
 
@@ -93,18 +108,19 @@ ZAF_ZBXAPI_USER|Zabbix API user|zaf
 ZAF_ZBXAPI_PASS|Zabbix API password|empty
 ZAF_ZBXAPI_AUTHTYPE|Zabbix API authentication type|internal
 ZAF_PLUGINS|Plugins to autoinstall|empty
+ZAF_ZBXSRV_HOST|Zabbix server hostname|zabbix
+ZAF_ZBXSRV_PORT|Zabbix server port|10051
+ZAF_HOSTNAME|Hostname of this machine|automatic
 
 Installer will try to autoguess suitable config options for your system.
 Now everything was tested on Debian and OpenWrt. If somebody is interrested in, you can help and test with some rpm specific functions. Remember that on some systems, default zabbix agent config is empty so you *need to* enter essential config options as parameters.
 
 ### Example
 Suppose you want to autoinstall agent on clean system. You need only curl installed. Everything else is one-cmd process.
-This command will install zaf, install zabbix-agent if necessary and sets zabbix variables on agent to reach server. This command can be automatized by puppet or another deploying system.
+This command will install zaf, install zabbix-agent if necessary and sets zabbix variables on agent to reach server (Server and ServerActive to zabbix.server.local). This command can be automatized by puppet or another deploying system.
 ```
 curl -k https://raw.githubusercontent.com/limosek/zaf/master/install.sh | sh -s auto \
-  Z_Server=zabbix.server.local \
-  Z_ServerActive=zabbix.server.local \
-  Z_HostnameItem=system.hostname Z_RefreshActiveChecks=60 \
+  ZAF_ZBXSRV_HOST=zabbix.server.local \
   ZAF_REPO_GITURL="git://gitserver.local"
 ```
 
@@ -115,12 +131,12 @@ git clone https://github.com/limosek/zaf.git \
  && cd zaf \
  && git checkout master \
  && git clone https://github.com/limosek/zaf-plugins.git \
- && make deb PLUGINS="./zaf-plugins/fsx" ZAF_PLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0" AGENT_OPTIONS="Z_Server=zabbix.server Z_ServerActive=zabbix.server Z_StartAgents=8"
+ && make deb PLUGINS="./zaf-plugins/fsx" ZAF_PLUGINS="zaf" ZAF_OPTIONS="ZAF_GIT=0 ZAF_ZBXSRV_HOST=zabbix.server.local" AGENT_OPTIONS="Z_StartAgents=8"
 sudo dpkg -i out/zaf-1.4master.deb
 ```
 General usage:
 ```
-make {deb|ipk|rpm} [ZAF_PLUGINS="plg1 [plg2]" [ZAF_OPTIONS="ZAF_cfg=val ..."] [AGENT_OPTIONS="Z_Server=host ..."]
+make {deb|ipk|rpm} [ZAF_PLUGINS="plg1 [plg2]" [ZAF_OPTIONS="ZAF_cfg=val ..."] [AGENT_OPTIONS="..."]
 ZAF_PLUGINS are embedded into package. Has to be local directories accessible during build.
 ```
 
@@ -154,10 +170,9 @@ Cmd: sudo fail2ban-client status $1 | grep "Currently banned:" | grep -o -E "[0-
 During plugin installation, zaf will check all dependencies, do install binaries and generates apropriate zabbix.conf.d entries.  Look into https://github.com/limosek/zaf-plugins repository for more examples.
 
 ## Zaf utility
-Zaf binary can be installed on any system from openwrt to big system. It has minimal dependencies and is shell based. Is has minimal size (up to 50kb of code). It can be used for installing, removing and testing zaf plugin items. Zaf should be run as root.
+Zaf binary can be installed on any system from openwrt to big system. It has minimal dependencies and is shell based. Is has minimal size (up to 50kb of code). It can be used for installing, removing and testing zaf plugin items. Zaf has to be configured and installed by root but it can be invoked as regular user.
 ```
-./zaf 
-./zaf Version 1.4master. Please use some of this commands:
+./zaf Version 1.4. Please use some of this commands:
 ./zaf Cmd [ZAF_OPTION=value] [ZAF_CTRL_Option=value] [ZAF_CTRLI_Item_Option=value] ...
 Plugin manipulation commands:
 ./zaf update                            To update repo (not plugins, similar to apt-get update)                         
@@ -173,36 +188,28 @@ Plugin info commands:
 Plugin diagnostic commands:
 ./zaf test [plugin[.item]]              To test [all] suported items by zabbix_agentd [for plugin]                      
 ./zaf get [plugin[.item]]               To test [all] suported items by zabbix_get [for plugin]                         
+./zaf run [plugin[.item]]               To test [all] suported items by directly runing command [for plugin]            
 ./zaf precache [plugin[.item]]          To precache [all] suported items                                                
+./zaf itemsh plugin.item                To spawn interactive shell in item context (same as UserParameter).             
 
 Zabbix API commands:
 ./zaf api                               To zabbix API functions. See ./zaf api for more info.                           
 
+Zabbix trapper commands:
+./zaf send plugin.item                  To send result of agent param directly to Zabbix server by zabbix_server.       
+Zabbix agent registration:
+./zaf register [hostname] [metadata]    To register hostname on Zabbix server (autoregistration).                       
+
 Agent config info commands:
 ./zaf userparms                         See userparms generated from zaf on stdout                                      
-./zaf agent-config                      Reconfigure zabbix userparms in /etc/zabbix/zabbix_agentd.d                     
+./zaf agent-config [force]              Reconfigure zabbix userparms in /etc/zabbix/zabbix_agentd.d                     
 
 Zaf related commands:
 ./zaf self-upgrade                      To self-upgrade zaf                                                             
 ./zaf self-remove                       To self-remove zaf and its config                                               
 ./zaf cache-clean                       To remove all entries from cache                                                
-```
+./zaf cache-list                        To show all entries in cache                                                    
 
-Zaf can even communicate with zabbix server using its API.  If you set ZAF_ZBXAPI_URL, ZAF_ZBXAPI_USER and ZAF_ZBXAPI_PASS in /etc/zaf.conf, you can use it:
-```
-./zaf api command [parameters]
-get-host-id host                        Get host id                                                                     
-get-byid-host id [property]             Get host property from id. Leave empty property for JSON                        
-get-template-id template                Get template id                                                                 
-get-byid-template id [property]         Get template property from id. Leave empty property for JSON                    
-get-map-id map                          Get map id                                                                      
-get-byid-map id [property]              Get map property from id. Leave empty property for JSON                         
-get-inventory host [fields]             Get inventory fields [or all fields]                                            
-export-hosts dir [hg]                   Backup all hosts [in group hg] (get their config from zabbix and save to dir/hostname.xml)
-export-host host                        Backup host (get config from zabbix to stdout)                                  
-import-template {plugin|file}           Import template for plugin or from file                                         
-export-template name                    Export template to stdout                                                       
-export-templates dir                    Export all templates to dir
 ```
 
 ### Installing plugin
@@ -236,15 +243,6 @@ Plugin parameters are available as environment variables in shell script/binary 
 zaf itemsh booked.num_reservations
 ```
 Interactive shell will be spawn and you can test your commands or scripts in same way how zabbix agent would do it. Use exit command or ctrl-D to get back.
-
-## How it works
-Zaf installer will do most of actions needed to monitor some specific plugin items. Configuration of plugin is very simple and text readable. Anybody can write its own plugin or make its plugin "zafable". It is enough to create *control.zaf" file. For example, look into https://github.com/limosek/zaf-plugins repository. This is default repository for zaf. 
-
-## I want to make my own plugin!
-Great! Look into https://github.com/limosek/zaf-plugins repository, look to control files and try to create your own. It is easy! You can contact me for help.
-
-## I want to help with zaf!
-Great! I have no time for testing on systems and writing system specific hacks. Next to this, templates should be optimized and tested for basic plugins. 
 
 
 
