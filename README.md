@@ -26,6 +26,15 @@ So zaf is here for you :)
 * Zabbix API support
 * Zabbix host autoregistration automation
 * Zabbix sender and agent glue (send results of agent checks to zabbix sender)
+* Zabbix backup support using [zaf](https://macura.cz/node/34)
+* Support for wireless neighbours, clients with autodiscovery [iwx module](https://github.com/limosek/zaf-plugins/tree/master/iwx)
+* Support for automated import of hosts and items from [CSV](https://github.com/limosek/zaf-plugins/tree/master/csv)
+* Support for fail2ban monitoring [fail2ban](https://github.com/limosek/zaf-plugins/tree/master/fail2ban)
+* Supoort for booked [booked](https://github.com/limosek/zaf-plugins/tree/master/booked)
+
+## Roadmap
+
+* External items support with automatic configuration of server
 
 ## How it works
 Zaf installer will do most of actions needed to monitor some specific plugin items. Configuration of plugin is very simple and text readable. Anybody can write its own plugin or make its plugin "zafable". It is enough to create *control.zaf" file. For example, look into https://github.com/limosek/zaf-plugins repository. This is default repository for zaf. 

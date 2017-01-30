@@ -320,8 +320,8 @@ zaf_get_item_params() {
 zaf_paramstosh() {
 	local parms
 	local IFS
-	parms=$(echo $*|cut -d '[' -f 2 | cut -d ']' -f 1| tr ',' ':')
-	IFS=:; for i in $parms; do
+	parms=$(echo $*|cut -d '[' -f 2 | cut -d ']' -f 1| tr ',' '~')
+	IFS="~"; for i in $parms; do
 		if [ -n "$i" ]; then
 			printf "$i "
 		else
