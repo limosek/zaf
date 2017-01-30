@@ -27,7 +27,6 @@ So zaf is here for you :)
 * Zabbix host autoregistration automation
 * Zabbix sender and agent glue (send results of agent checks to zabbix sender)
 
-
 ## How it works
 Zaf installer will do most of actions needed to monitor some specific plugin items. Configuration of plugin is very simple and text readable. Anybody can write its own plugin or make its plugin "zafable". It is enough to create *control.zaf" file. For example, look into https://github.com/limosek/zaf-plugins repository. This is default repository for zaf. 
 
@@ -42,7 +41,9 @@ OK, great, if you love this tool, you can support new development on paypal acco
 
 ## Installing Zaf
 
-Note: this instructions are for *trunk* version of zaf. For *stable* version, see https://github.com/limosek/zaf/tree/1.3
+**Note**: this instructions are for *trunk* version of zaf. For *stable* version, see https://github.com/limosek/zaf/tree/1.3
+
+**Note**: You can find more examples on "my site":https://macura.cz/search/node?keys=zaf
 
 You need to be root and you must have curl installed on your system. Depending on your system, github certificates may not be available so you have to use *-k* option for curl (insecure). Default installation type is silent. So there will be no questions and everything will be autodetected. This simple command should be used on most systems:
 ```
