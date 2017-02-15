@@ -24,8 +24,8 @@ zaf_wrn() {
 }
 zaf_err() {
 	logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error -- $@
-				logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error "Exiting with error!"
-				exit 1
+	logger ${ZAF_LOG_STDERR} -p user.err -t zaf-error "Exiting with error!"
+	exit 1
 }
 # Help option
 # $1 - key

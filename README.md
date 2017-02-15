@@ -222,7 +222,9 @@ Zaf related commands:
 
 ```
 
-### Installing plugin
+### Plugin operations
+
+#### Installing plugin
 To install plugin from common repository. If git is available, local git repo is tried first. If not, remote https repo is tried second.
 ```
 zaf install zaf
@@ -237,7 +239,7 @@ zaf install /some/plugin
 ```
 Installer will look into control file, run setup task defined there, fetch binaries and scripts needed for specific plugin and test system dependencies for that plugin. If everything is OK, zaf_plugin.conf is created in zabbix_agentd.d conf directory and userparameters are automaticaly added.
 
-### Plugin parameters
+#### Plugin parameters
 Plugin can have some global parameters. For example url of local server to check. See booked plugin. In that case, you have to specify parameters before use.
 To set parameters by environment:
 ```
@@ -253,6 +255,34 @@ Plugin parameters are available as environment variables in shell script/binary 
 zaf itemsh booked.num_reservations
 ```
 Interactive shell will be spawn and you can test your commands or scripts in same way how zabbix agent would do it. Use exit command or ctrl-D to get back.
+
+#### Run plugin subcommand
+If plugin is capable of runing subcommand (for example csv plugin), it can be called directly
+```
+zaf csv send
+```
+
+### Agent tests
+
+#### To test result of item (using zabbix_agent -t)
+
+```
+zaf test plugin.item[parameters]
+```
+
+#### To test result of item (using zabbix_get)
+
+```
+zaf test plugin.item[parameters]
+```
+
+#### To get result of item directly to stdout
+
+```
+zaf run plugin.item[parameters]
+```
+
+
 
 
 
