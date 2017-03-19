@@ -12,6 +12,7 @@ include deb.mk
 include arch.mk
 include ipk.mk
 include rpm.mk
+include tgz.mk
 
 CONTROLFILES=$(foreach p,$(PLUGINS),$(p)/control.zaf)
 ZAF_EXPORT_OPTS=$(foreach o,$(ZAF_OPTIONS),$(shell echo $(o)|cut -d '=' -f 1))
@@ -34,6 +35,9 @@ arch:	$(ARCH_PKG)
 rpm:	$(RPM_PKG)
 
 ipk:	$(IPK_PKG)
+
+tar:	tgz
+tgz:	$(TGZ_PKG)
 
 clean:
 	@rm -rf tmp/* out/*
